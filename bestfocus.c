@@ -1,0 +1,471 @@
+#include "checkfocus.h"
+#include <getopt.h>
+
+/*
+ * Find the "box" with the "best focus".
+ * As an attempt to avoid an edge case, where the image just happens to line up on predefined boxes
+ * we define overlapping boxes as follows:
+ *
+ * Assume an image is 100 pixels square (0 to 99) first we define 10 boxes (0-9)(10-19)...(90-99)
+ * So box1 is:  "0:0-9:9" box2 is "10:0-19:9" box3 is "20:0-29:9"  (top LH corner to bottom right)
+ *
+ * Then we define an overlapping set of "9" boxes, at half way points
+ *
+ * box101 is 5:5-14:14 , box102 is 15:5-24:14 ... box109 is 85:5-94:14
+ *
+ *
+ * +--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+ * | box001 | box002 | box003 | box004 | box005 | box006 | box007 | box008 | box009 | box010 |
+ * |        |        |        |        |        |        |        |        |        |        |
+ * |        |        |        |        |        |        |        |        |        |        |
+ * |    .========.========.========.========.========.========.========.========.========.   |
+ * |    : BOX101 : BOX102 : BOX103 : BOX104 : BOX105 : BOX106 : BOX107 : BOX108 : BOX109 :   |
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * +----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----+---+
+ * | box011 | box012 | box013 | box014 | box015 | box016 | box017 | box018 | box019 | box020 |
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * |    :   |    :   | X  :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * |    .========.========.========.========.========.========.========.========.========.   |
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * +----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----+---+
+ *
+ *  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ similar ~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * |    .========.========.========.========.========.========.========.========.========.   |
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * +----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----+---+
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
+ * |    : BOX181 : BOX182 : BOX183 : BOX184 : BOX186 : BOX186 : BOX187 : BOX188 : BOX189 :   |
+ * |    .========.========.========.========.========.========.========.========.========.   |
+ * |        |        |        |        |        |        |        |        |        |        |
+ * |        |        |        |        |        |        |        |        |        |        |
+ * |        |        |        |        |        |        |        |        |        |        |
+ * | box091 | box092 | box093 | box094 | box095 | box096 | box097 | box098 | box099 | box100 |
+ * +--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+ *
+
+ * To be clear, we ALWAYS get box1 ... box189 (190 boxes). If we had an image
+ * 105 by 108 pixels it would still define the above 190 boxes so the right hand
+ * edge would still be 99, the lower bound also 99. This means we would not spot
+ * good focus near the edges. For real world photography it's unlikly these are
+ * the areas where the "intended subject" lay.
+ *
+ * If we had an image 2000 by 1000, the "boxes" would start with 0:0-199:99
+ * 
+ * So overall, each box holds 1% of the image. 190 boxes means most of the image
+ * is seen in two boxes. In the above diagram the "X" is in boxes box013 and BOX102.
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ */
+
+
+
+
+
+
+static int debug=0;
+static int verbose=0;
+
+static int   channel = RGB_GREEN;
+
+static char *filelist  = NULL;
+
+
+static struct numbered_box
+{
+  int	     box_no;
+  Cf_stat    stat;
+  struct box box;
+} nbox [19];   /* 10 primary, 9 secondary */
+
+static struct numbered_box best_box = {0,0,{0,0,0,0}};
+
+static void dump_nbox(struct numbered_box *p)
+{
+  fprintf(stderr,"box%03d: Stat=%llu (%d:%d-%d:%d)",
+	  p->box_no,
+	  p->stat,
+	  p->box.first_column, p->box.first_row, p->box.last_column, p->box.last_row);
+}
+
+
+static CF_BOOL update_box(struct numbered_box *p, int row, int col, int box_height, Cf_stat interrow_value, Cf_stat intercol_value)
+{
+  CF_BOOL ended = CF_FALSE;
+
+  if (inbox(&(p->box), row, col))    /* considering just this one box, are we inside it? */
+    {
+      p->stat                += interrow_value + intercol_value;  /* TBD use a flag to limit to just horizontal or vertical */
+    }
+  
+  ended = row >= p->box.last_row;	/* have we reached the final row in this box? */
+
+  if (ended)	/* We've reached the end of this BOX ...shuffle down, we go off the "end" , but code stops at end of image */
+    {
+    if (verbose>1)
+      {
+	fprintf(stderr, "box stat compete:: ");
+	dump_nbox(p);
+	fprintf(stderr, "\n");
+      }
+    
+      if (p->stat > best_box.stat)	/* Horra, we are now the "best box" */
+	{
+	  best_box.box_no = p->box_no;
+	  best_box.stat   = p->stat;
+	  copy_box(&best_box.box, &(p->box));
+
+	  if (verbose)
+	    {
+	      fprintf(stderr, "New BESTBOX found: ");
+	      dump_nbox(p);
+	      fprintf(stderr, "\n");
+	    }
+	}
+      
+      p->box.first_row += box_height;
+      p->box.last_row  += box_height;
+      p->stat           = 0; /* start again*/
+      if (p->box_no > 100)
+	p->box_no += 9;   /* Alternate Box ...there are 9 on each row (I really should have used a regular scheme)*/
+      else
+	p->box_no += 10;  /* Primary Box ...there are 10 on each row */
+    }
+  return(ended);
+}
+
+
+/* If a function has more than six argumensts, you missed one */
+static void box_contrast(int               row,
+			 JDIMENSION        output_width,
+			 int               output_components,
+			 int		   focus_channel,
+			 JSAMPARRAY        this_buffer,
+			 JSAMPARRAY        prev_buffer,
+			 int		   box_height,
+			 struct Cf_stats * result)
+{
+  int             col;
+  int		  i;
+  unsigned char * p;
+  unsigned char * q;
+
+  p = *this_buffer;
+  q = *prev_buffer;
+
+  for (col=0; col<output_width-1; ++col)  /* NB, stop one component short */
+    {
+      Cf_stat interrow_value = diff(p[focus_channel],q[focus_channel]);                      /* for greyscale [0] for green [1] etc */
+      Cf_stat intercol_value = diff(p[focus_channel],(p+output_components)[focus_channel]);  
+      
+      if (debug > 2)
+	{
+	  fprintf(stderr, "col=%u, row=%u, interrow=%llu, intercol=%llu\n",  col, row, interrow_value, intercol_value);
+	}
+
+      /* we've got 2 numbers (inter column and inter row) contrast .... these may be in 2 box (a primary and an alternate) */
+
+      for (i=0; i<19; ++i)
+	update_box(&nbox[i], row, col, box_height, interrow_value, intercol_value);
+      
+      /* step to the next component */
+      p+=output_components;
+      q+=output_components;
+    }
+}
+
+
+
+int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
+{
+  struct jpeg_decompress_struct cinfo;
+  struct jpeg_error_mgr         jerr;
+
+  JSAMPARRAY                    buffer1;
+  JSAMPARRAY                    buffer2;
+
+  JSAMPARRAY                  * this_row;
+  JSAMPARRAY                  * prev_row;
+  JSAMPARRAY                  * temp_row;
+
+
+  J_COLOR_SPACE out_color_space;       /* colorspace for output */
+  JDIMENSION    output_width;          /* scaled image width */
+  JDIMENSION    output_height;         /* scaled image height */
+  int           out_color_components;  /* # of color components in out_color_space */
+  int           output_components;     /* # of color components returned */
+
+  int		row;
+  int	        row_stride;
+
+  int		focus_channel;
+
+  int		box_height;
+  int		box_width;
+  int		half_height;
+  int		half_width;
+
+  int		i;
+
+  cinfo.err = jpeg_std_error(&jerr);   /* standard error handling (writes to stderr) */
+
+
+  jpeg_create_decompress(&cinfo);	/* init */
+  jpeg_stdio_src(&cinfo, infile);	/* Set input */
+
+  (void) jpeg_read_header(&cinfo, TRUE); /* From now we have the basic stats of the jpeg (e.g. width& height) */
+
+  /* now we set any  "parameters for decompression" (we have none, defaults were set by jpeg_read_header) */
+
+  (void) jpeg_start_decompress(&cinfo);  /* now we're live, using the parameters just set */
+
+
+  /* mostly a documentation aid, to make it clear whch values we use from "cinfo" */
+  out_color_space      = cinfo.out_color_space;       /* colorspace for output */
+  output_width         = cinfo.output_width;          /* scaled image width */
+  output_height        = cinfo.output_height;         /* scaled image height */
+  out_color_components = cinfo.out_color_components;  /* # of color components in out_color_space */
+  output_components    = cinfo.output_components;     /* # of color components returned */
+
+  focus_channel        = (out_color_components == 1) ? 0 : channel; /* greyscale only has index 0 */
+
+  box_height           = output_height/10;	      /* size of full box (1% of image) */
+  box_width            = output_width/10;
+  half_height          = box_height/2;                /* Offset of alternate boxes */
+  half_width           = box_width/2;
+
+
+  /* Create inital boxes (1st row has 10, next alternate row of 9 */
+
+  int column;
+  column = 0;
+
+  /* primary boxes */
+  for (i=0; i<10; ++i)
+    {
+      nbox[i].box_no           = 1+i;           /* 1 to 10 */
+      nbox[i].stat             = 0;
+      nbox[i].box.first_row    = 0;             /* e.g. rows, 0 to 9 [in example] */
+      nbox[i].box.last_row     = box_height-1;     
+      nbox[i].box.first_column = column;     
+      nbox[i].box.last_column  = column+box_width-1;
+      column += box_width;
+    }
+
+  column = half_width;
+  
+  /* alternate boxes */
+  for (i=0; i<9; ++i)
+    {
+      nbox[10+i].box_no           = 101+i;           /* 101 to 109 */
+      nbox[10+i].stat             = 0;
+      nbox[10+i].box.first_row    = half_height;    /* e.g. rows, 5 to 14 [in example] */
+      nbox[10+i].box.last_row     = box_height+half_height-1;     
+      nbox[10+i].box.first_column = column;     
+      nbox[10+i].box.last_column  = column+box_width-1;
+      column += box_width;
+    }
+
+  if (debug)
+    {
+      fprintf(stderr, "initial Boxes defined\n");
+
+      for (i=0; i<19; ++i)
+	{
+	  fprintf(stderr, "%0d:", i);
+	  dump_nbox(&nbox[i]);
+	  fprintf(stderr, "\n");
+	}
+    }
+  
+
+  if (verbose)
+    {
+      fprintf(stderr, "Colour Space     : %s\n", colorspace_string(out_color_space));
+      fprintf(stderr, "Output Width     : %d\n", output_width);
+      fprintf(stderr, "Output Height    : %d\n", output_height);
+      fprintf(stderr, "Output Colour Components: %d Number of components in colour Space)\n", out_color_components);
+      fprintf(stderr, "Output Components       : %d (actual number per Pixel [1 iff indexed])\n", output_components);
+
+      fprintf(stderr, "Box Height       : %d\n", box_height);
+      fprintf(stderr, "Box Width        : %d\n", box_width);
+    }
+
+  row_stride = cinfo.output_width * cinfo.output_components; /* in bytes */
+
+  /* Use internal memory manager to give us a buffer ..sadly (and undocumented) it wants BYTES not components */
+  buffer1 = (cinfo.mem->alloc_sarray) ((j_common_ptr) &cinfo,
+				       JPOOL_IMAGE,            /* just for this (jpeg) image */
+				       row_stride,	     /* Number of bytes (not samples) */
+				       1);
+
+  buffer2 = (cinfo.mem->alloc_sarray) ((j_common_ptr) &cinfo,
+				       JPOOL_IMAGE,
+				       row_stride,
+				       1);
+
+  /* read the 1st row (special case) outside of loop */
+  (void) jpeg_read_scanlines(&cinfo, buffer1, 1);
+
+  if (debug>2)
+    dump_1row(output_components, buffer1, output_width);
+
+  prev_row = &buffer1;
+  this_row = &buffer2;
+
+
+  /* Do somthing clever with flip/flop (2 pointers) [avoid clever XOR trick, confuses non-SW engineers]*/
+
+  row=1; /* done 1 already */
+
+  if (debug)
+      fprintf(stderr, "will process %d rows\n", output_height);
+
+  while (cinfo.output_scanline < cinfo.output_height)
+    {
+      (void) jpeg_read_scanlines(&cinfo, *this_row, 1);
+      ++row;
+
+      box_contrast(row, output_width, output_components, focus_channel, *this_row, *prev_row, box_height, result);
+
+      temp_row    = prev_row;
+      prev_row    = this_row;   /* what was current, now becomes previous  */
+      this_row    = temp_row;	/* the old "prev" is now free to be reused */
+    }
+
+  if (debug)
+      fprintf(stderr, "ended with row %d\n", row);
+
+
+  (void) jpeg_finish_decompress(&cinfo);
+  jpeg_destroy_decompress(&cinfo);
+
+  return 0;
+}
+
+
+static void usage(char prog[])
+{
+  fprintf(stderr, "Usage: %s [-v|--verbose][-d|--debug][-r|--red|-b|--blue|-g|--green][-B x:y-x:y|--box x:y-x:y][-f <filelistname>|--file <filelistname>] <list of filenames>\n"
+                  "-v or --verbose produce more verbose output, can be repeated for more verbosity\n"
+                  "-d or --debug produce debug output on stderr, can be repeated for more verbosity\n"
+	          "[-r|--red|-b|--blue|-g|--green] base the calculations on reg/green or blue channels, default is green, ignored for greyscale\n"
+		  "[-f <filelistname>|--file <filelistname>] filelistname is a file which contains a list of files, one per line. These are processed before <list of filenames>\n"
+	  , prog);
+}
+
+
+int main(int argc, char **argv)
+{
+
+  FILE           *input_file;
+  char           *input_filename;
+  struct Cf_stats result;
+
+  int c;
+
+  while (1)
+    {
+      int option_index = 0;
+      static struct option long_options[] =
+	{
+	 /* name     has_arg,           flag, val */
+	 {"debug",   no_argument,       0,    'd' },
+	 {"verbose", no_argument,       0,    'v' },
+	 {"red",     no_argument,       0,    'r' },
+	 {"blue",    no_argument,       0,    'b' },
+	 {"green",   no_argument,       0,    'g' },
+	 {"file",    required_argument, 0,    'f' },
+	 {0,         0,                 0,    0 }
+	};
+
+      c = getopt_long(argc,
+		      argv,
+		      "dvrbgf:",
+		      long_options,
+		      &option_index);
+
+      if (c == -1)
+	break;
+
+      switch (c)
+	{
+
+	case 'd':
+	  debug+=1;
+	  break;
+
+	case 'v':
+	  verbose+=1;
+	  break;
+
+	case 'r':
+	  channel= RGB_RED;
+	  break;
+
+	case 'b':
+	  channel= RGB_BLUE;
+	  break;
+
+	case 'g':
+	  channel= RGB_GREEN;
+	  break;
+
+	case 'f':
+	  filelist=optarg;
+	  break;
+
+	default:
+	  usage(argv[0]);
+	  exit(1);
+	}
+    }
+
+  if (debug)
+    fprintf(stderr, "Following getopt %d arguments remain\n", argc-optind);
+
+  for (;optind < argc; ++optind)
+    {
+      input_filename = argv[optind];
+
+      if (verbose)
+	fprintf(stderr, "Processing file: %s\n", input_filename);
+
+      if ((input_file = fopen(input_filename, "rb")) == NULL) {
+	fprintf(stderr, "can't open %s\n", input_filename );
+	return -1;
+      }
+      read_jpeg_file(input_file, &result);
+
+      if (verbose)
+	{
+	  fprintf(stderr, "Final BESTBOX: ");
+	  dump_nbox(&best_box);
+	  fprintf(stderr, "\n");
+	}
+
+
+      printf("%llu (%d:%d-%d:%d)\n",
+	     best_box.stat,
+	     best_box.box.first_column,  best_box.box.first_row,
+	     best_box.box.last_column,   best_box.box.last_row);
+
+
+    }
+
+  exit(0);
+}
