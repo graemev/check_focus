@@ -9,7 +9,7 @@
  * Assume an image is 100 pixels square (0 to 99) first we define 10 boxes (0-9)(10-19)...(90-99)
  * So box1 is:  "0:0-9:9" box2 is "10:0-19:9" box3 is "20:0-29:9"  (top LH corner to bottom right)
  *
- * Then we define an overlapping set of "9" boxes, at half way points
+ * Then we define an overlapping set of "alternate " boxes, at half way points
  *
  * box101 is 5:5-14:14 , box102 is 15:5-24:14 ... box109 is 85:5-94:14
  *
@@ -18,34 +18,34 @@
  * | box001 | box002 | box003 | box004 | box005 | box006 | box007 | box008 | box009 | box010 |
  * |        |        |        |        |        |        |        |        |        |        |
  * |        |        |        |        |        |        |        |        |        |        |
- * |    .========.========.========.========.========.========.========.========.========.   |
- * |    : BOX101 : BOX102 : BOX103 : BOX104 : BOX105 : BOX106 : BOX107 : BOX108 : BOX109 :   |
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * +----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----+---+
- * | box011 | box012 | box013 | box014 | box015 | box016 | box017 | box018 | box019 | box020 |
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * |    :   |    :   | X  :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * |    .========.========.========.========.========.========.========.========.========.   |
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * +----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----+---+
+ * |    .========.========.========.========.========.========.========.========.========.=========.
+ * |    : BOX101 : BOX102 : BOX103 : BOX104 : BOX105 : BOX106 : BOX107 : BOX108 : BOX109 : BOX110  :
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |	   :
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |	   :
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |	   :
+ * +----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----+---+-----+
+ * | box011 | box012 | box013 | box014 | box015 | box016 | box017 | box018 | box019 | box020 |	   :
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |	   :
+ * |    :   |    :   | X  :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |	   :
+ * |    .========.========.========.========.========.========.========.========.========.=========.
+ * |    : BOX111 : BOX112 : BOX113 :  BOX114: BOX115 :  BOX116: BOX117 : BOX118 : BOX119 : BOX120  :
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |	   :
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |	   :
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |	   :
+ * +----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----+---+-----+
  *
  *  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ similar ~~~~~~~~~~~~~~~~~~~~~~~
  *
- * |    .========.========.========.========.========.========.========.========.========.   |
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * +----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----+---+
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |
- * |    : BOX181 : BOX182 : BOX183 : BOX184 : BOX186 : BOX186 : BOX187 : BOX188 : BOX189 :   |
- * |    .========.========.========.========.========.========.========.========.========.   |
+ * |    .========.========.========.========.========.========.========.========.========.========.
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :
+ * +----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----:---+----+---+----+
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :
+ * |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :   |    :
+ * |    : BOX181 : BOX182 : BOX183 : BOX184 : BOX185 : BOX186 : BOX187 : BOX188 : BOX189 : BOX190 :
+ * |    .========.========.========.========.========.========.========.========.========.========.
  * |        |        |        |        |        |        |        |        |        |        |
  * |        |        |        |        |        |        |        |        |        |        |
  * |        |        |        |        |        |        |        |        |        |        |
@@ -60,7 +60,7 @@
  * the areas where the "intended subject" lay.
  *
  * If we had an image 2000 by 1000, the "boxes" would start with 0:0-199:99
- * 
+ *
  * So overall, each box holds 1% of the image. 190 boxes means most of the image
  * is seen in two boxes. In the above diagram the "X" is in boxes box013 and BOX102.
  *
@@ -71,9 +71,16 @@
  *
  *
  */
+/* eg 10 boxes horizontal and 10 boxes vertical */
 
+#define HBOXES (10)
+#define VBOXES (10)
 
+/* eg 100 primary (and 100 secondary) total boxes (ie on paper) */
+#define PBOXES (HBOXES*VBOXES)
 
+/* eg 10 primary (and 10 secondary) boxes at any one time (ie in memory)*/
+#define CURSORS (HBOXES*2)
 
 
 
@@ -90,7 +97,7 @@ static struct numbered_box
   int	     box_no;
   Cf_stat    stat;
   struct box box;
-} nbox [19];   /* 10 primary, 9 secondary */
+} nbox [CURSORS];   /* e.g. 10 primary, 10 secondary */
 
 static struct numbered_box best_box = {0,0,{0,0,0,0}};
 
@@ -111,7 +118,7 @@ static CF_BOOL update_box(struct numbered_box *p, int row, int col, int box_heig
     {
       p->stat                += interrow_value + intercol_value;  /* TBD use a flag to limit to just horizontal or vertical */
     }
-  
+
   ended = row >= p->box.last_row;	/* have we reached the final row in this box? */
 
   if (ended)	/* We've reached the end of this BOX ...shuffle down, we go off the "end" , but code stops at end of image */
@@ -122,7 +129,7 @@ static CF_BOOL update_box(struct numbered_box *p, int row, int col, int box_heig
 	dump_nbox(p);
 	fprintf(stderr, "\n");
       }
-    
+
       if (p->stat > best_box.stat)	/* Horra, we are now the "best box" */
 	{
 	  best_box.box_no = p->box_no;
@@ -136,14 +143,11 @@ static CF_BOOL update_box(struct numbered_box *p, int row, int col, int box_heig
 	      fprintf(stderr, "\n");
 	    }
 	}
-      
+
       p->box.first_row += box_height;
       p->box.last_row  += box_height;
       p->stat           = 0; /* start again*/
-      if (p->box_no > 100)
-	p->box_no += 9;   /* Alternate Box ...there are 9 on each row (I really should have used a regular scheme)*/
-      else
-	p->box_no += 10;  /* Primary Box ...there are 10 on each row */
+      p->box_no += HBOXES;   /* e.g 10 on each row, so same place in next row */
     }
   return(ended);
 }
@@ -170,8 +174,8 @@ static void box_contrast(int               row,
   for (col=0; col<output_width-1; ++col)  /* NB, stop one component short */
     {
       Cf_stat interrow_value = diff(p[focus_channel],q[focus_channel]);                      /* for greyscale [0] for green [1] etc */
-      Cf_stat intercol_value = diff(p[focus_channel],(p+output_components)[focus_channel]);  
-      
+      Cf_stat intercol_value = diff(p[focus_channel],(p+output_components)[focus_channel]);
+
       if (debug > 2)
 	{
 	  fprintf(stderr, "col=%u, row=%u, interrow=%llu, intercol=%llu\n",  col, row, interrow_value, intercol_value);
@@ -179,10 +183,10 @@ static void box_contrast(int               row,
 
       /* we've got 2 numbers (inter column and inter row) contrast .... these may be in 2 box (a primary and an alternate) */
 
-      for (i=0; i<19; ++i)
+      for (i=0; i<CURSORS; ++i)
 	update_box(&nbox[i], row, col, box_height, interrow_value, intercol_value);
-      
-      /* step to the next component */
+
+      /* step to the next (jpeg) component */
       p+=output_components;
       q+=output_components;
     }
@@ -243,40 +247,40 @@ int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
 
   focus_channel        = (out_color_components == 1) ? 0 : channel; /* greyscale only has index 0 */
 
-  box_height           = output_height/10;	      /* size of full box (1% of image) */
-  box_width            = output_width/10;
+  box_height           = output_height/VBOXES;	      /* size of full box  */
+  box_width            = output_width/HBOXES;
   half_height          = box_height/2;                /* Offset of alternate boxes */
   half_width           = box_width/2;
 
 
-  /* Create inital boxes (1st row has 10, next alternate row of 9 */
+  /* Create inital boxes (1st row has HBOXES, next alternate row of HBOXES */
 
   int column;
   column = 0;
 
   /* primary boxes */
-  for (i=0; i<10; ++i)
+  for (i=0; i<HBOXES; ++i)			/* e.g. 0 ... 9 */
     {
-      nbox[i].box_no           = 1+i;           /* 1 to 10 */
+      nbox[i].box_no           = 1+i;           /* e.g. 1 to 10 */
       nbox[i].stat             = 0;
       nbox[i].box.first_row    = 0;             /* e.g. rows, 0 to 9 [in example] */
-      nbox[i].box.last_row     = box_height-1;     
-      nbox[i].box.first_column = column;     
+      nbox[i].box.last_row     = box_height-1;
+      nbox[i].box.first_column = column;
       nbox[i].box.last_column  = column+box_width-1;
       column += box_width;
     }
 
   column = half_width;
-  
+
   /* alternate boxes */
-  for (i=0; i<9; ++i)
+  for (i=0; i<HBOXES; ++i)                              /* eg 0 ... 9 */
     {
-      nbox[10+i].box_no           = 101+i;           /* 101 to 109 */
-      nbox[10+i].stat             = 0;
-      nbox[10+i].box.first_row    = half_height;    /* e.g. rows, 5 to 14 [in example] */
-      nbox[10+i].box.last_row     = box_height+half_height-1;     
-      nbox[10+i].box.first_column = column;     
-      nbox[10+i].box.last_column  = column+box_width-1;
+      nbox[HBOXES+i].box_no           = PBOXES+1+i;     /* e.g. 10 .. 19 get 101 to 110 */
+      nbox[HBOXES+i].stat             = 0;
+      nbox[HBOXES+i].box.first_row    = half_height;    /* e.g. rows, e.g. 5 to 14 [in example] */
+      nbox[HBOXES+i].box.last_row     = box_height+half_height-1;
+      nbox[HBOXES+i].box.first_column = column;
+      nbox[HBOXES+i].box.last_column  = column+box_width-1;
       column += box_width;
     }
 
@@ -284,14 +288,14 @@ int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
     {
       fprintf(stderr, "initial Boxes defined\n");
 
-      for (i=0; i<19; ++i)
+      for (i=0; i<(CURSORS); ++i)
 	{
 	  fprintf(stderr, "%0d:", i);
 	  dump_nbox(&nbox[i]);
 	  fprintf(stderr, "\n");
 	}
     }
-  
+
 
   if (verbose)
     {
