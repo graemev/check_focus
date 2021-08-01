@@ -1,5 +1,7 @@
 #include "checkfocus.h"
 #include <getopt.h>
+#include <string.h>
+#include <time.h>
 
 /*
  * Find the "box" with the "best focus".
@@ -73,8 +75,8 @@
  */
 /* eg 10 boxes horizontal and 10 boxes vertical */
 
-#define HBOXES (10)
-#define VBOXES (10)
+#define HBOXES (100)
+#define VBOXES (100)
 
 /* eg 100 primary (and 100 secondary) total boxes (ie on paper) */
 #define PBOXES (HBOXES*VBOXES)
@@ -227,7 +229,6 @@ int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
 
   cinfo.err = jpeg_std_error(&jerr);   /* standard error handling (writes to stderr) */
 
-
   jpeg_create_decompress(&cinfo);	/* init */
   jpeg_stdio_src(&cinfo, infile);	/* Set input */
 
@@ -252,7 +253,13 @@ int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
   half_height          = box_height/2;                /* Offset of alternate boxes */
   half_width           = box_width/2;
 
-
+  best_box.box_no           = 0;
+  best_box.stat             = 0;
+  best_box.box.first_column = 0;
+  best_box.box.first_row    = 0;
+  best_box.box.last_column  = 0;
+  best_box.box.last_row     = 0;
+  
   /* Create inital boxes (1st row has HBOXES, next alternate row of HBOXES */
 
   int column;
@@ -373,15 +380,53 @@ static void usage(char prog[])
 }
 
 
-int main(int argc, char **argv)
+static int process_1file(char * input_filename)
 {
-
   FILE           *input_file;
-  char           *input_filename;
   struct Cf_stats result;
 
-  int c;
+  time_t start = time(NULL);
+  time_t end;
+  
+  if (verbose)
+    fprintf(stderr, "Processing file: %s\n", input_filename);
 
+  if ((input_file = fopen(input_filename, "rb")) == NULL) {
+    fprintf(stderr, "can't open %s\n", input_filename );
+    return -1;
+  }
+
+  read_jpeg_file(input_file, &result);
+
+  if (verbose)
+    {
+      fprintf(stderr, "Final BESTBOX: ");
+      dump_nbox(&best_box);
+      fprintf(stderr, "\n");
+    }
+  
+
+  printf("%llu (%d:%d-%d:%d)\n",
+	 best_box.stat,
+	 best_box.box.first_column,  best_box.box.first_row,
+	 best_box.box.last_column,   best_box.box.last_row);
+
+
+  end = time(NULL);
+
+  if (verbose)
+    fprintf(stderr, "Processing took %0.0f seconds\n", difftime(end, start));
+
+  
+  return 0;
+}
+
+
+int main(int argc, char **argv)
+{
+  char           *input_filename;
+  int c;
+  
   while (1)
     {
       int option_index = 0;
@@ -439,6 +484,32 @@ int main(int argc, char **argv)
 	}
     }
 
+#define MAX_FILENAME 4096
+  
+  if (filelist)
+    {
+      FILE * p_filelist;
+      char   indirect_filename[MAX_FILENAME];  /* huge, to avoid buffer overflow risks */
+      
+      if (verbose)
+	fprintf(stderr, "Processing filelist: %s\n", filelist);
+
+      if ((p_filelist = fopen(filelist, "rb")) == NULL)
+	{
+	fprintf(stderr, "can't open [filelist] %s\n", filelist );
+	return -1;
+	}
+
+      while (fgets(indirect_filename, MAX_FILENAME, p_filelist))
+	{
+	  indirect_filename[strcspn(indirect_filename, "\n")] = 0;  /* splat out the /n, otherwise bad filename */
+	  process_1file(indirect_filename);
+	}
+    }
+
+  
+  /* Trailing args are filename */
+
   if (debug)
     fprintf(stderr, "Following getopt %d arguments remain\n", argc-optind);
 
@@ -446,30 +517,7 @@ int main(int argc, char **argv)
     {
       input_filename = argv[optind];
 
-      if (verbose)
-	fprintf(stderr, "Processing file: %s\n", input_filename);
-
-      if ((input_file = fopen(input_filename, "rb")) == NULL) {
-	fprintf(stderr, "can't open %s\n", input_filename );
-	return -1;
-      }
-      read_jpeg_file(input_file, &result);
-
-      if (verbose)
-	{
-	  fprintf(stderr, "Final BESTBOX: ");
-	  dump_nbox(&best_box);
-	  fprintf(stderr, "\n");
-	}
-
-
-      printf("%llu (%d:%d-%d:%d)\n",
-	     best_box.stat,
-	     best_box.box.first_column,  best_box.box.first_row,
-	     best_box.box.last_column,   best_box.box.last_row);
-
-
+      process_1file(input_filename);
     }
-
   exit(0);
 }

@@ -1,5 +1,6 @@
 #include "checkfocus.h"
 #include <getopt.h>
+#include <string.h>
 
 static int debug=0;
 static int verbose=0;
@@ -139,13 +140,13 @@ int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
       int mid_row         = output_height/2;
       int mid_column      = output_width/2;
 
-      this_box.first_row      = mid_row - box_half_width;  /* so total box is 10% of image, in the centre */
+      this_box.first_row     = mid_row - box_half_width;  /* so total box is 10% of image, in the centre */
       this_box.last_row      = mid_row + box_half_width;
       this_box.first_column  = mid_column - box_half_height;
       this_box.last_column   = mid_column + box_half_height;
     }
 
-  if (verbose>1)
+  if (verbose)
     {
       fprintf(stderr, "Box used %d:%d-%d:%d\n", this_box.first_column, this_box.first_row, this_box.last_column, this_box.last_row);
     }
@@ -224,10 +225,43 @@ static void usage(char prog[])
 }
 
 
+static int process_1file(char * input_filename)
+{
+  
+  FILE           *input_file;
+  struct Cf_stats result;
+
+  if (verbose)
+    fprintf(stderr, "Processing file: [%s]\n", input_filename);
+
+  if ((input_file = fopen(input_filename, "rb")) == NULL)
+    {
+    fprintf(stderr, "can't open [%s]\n", input_filename );
+    return -1;
+    }
+
+  read_jpeg_file(input_file, &result);
+
+  printf("%s %llu %llu %llu %llu %llu %llu\n",
+	 input_filename,
+	 result.overall,
+	 result.horizontal,
+	 result.vertical,
+
+	 result.square,
+	 result.square_horizontal,
+	 result.square_vertical);
+
+  if (verbose)
+    fprintf(stderr, "\n");
+
+  return 0;
+}
+
+
+
 int main(int argc, char **argv)
 {
-
-  FILE           *input_file;
   char           *input_filename;
   struct Cf_stats result;
 
@@ -326,36 +360,37 @@ int main(int argc, char **argv)
       box.last_column=bottomx;
       box.last_row=bottomy;
     }
+
+#define MAX_FILENAME 4096
   
+  if (filelist)
+    {
+      FILE * p_filelist;
+      char   indirect_filename[MAX_FILENAME];  /* huge, to avoid buffer overflow risks */
+      
+      if (verbose)
+	fprintf(stderr, "Processing filelist: %s\n", filelist);
+
+      if ((p_filelist = fopen(filelist, "rb")) == NULL)
+	{
+	fprintf(stderr, "can't open [filelist] %s\n", filelist );
+	return -1;
+	}
+
+      while (fgets(indirect_filename, MAX_FILENAME, p_filelist))
+	{
+	  indirect_filename[strcspn(indirect_filename, "\n")] = 0;  /* splat out the /n, otherwise bad filename */
+	  process_1file(indirect_filename);
+	}
+    }
   
+  /* Trailing args are filename */
+
   for (;optind < argc; ++optind)
     {
       input_filename = argv[optind];
 
-      if (verbose)
-	fprintf(stderr, "Processing file: %s\n", input_filename);
-
-      if ((input_file = fopen(input_filename, "rb")) == NULL) {
-	fprintf(stderr, "can't open %s\n", input_filename );
-	return -1;
-      }
-      read_jpeg_file(input_file, &result);
-
-      printf("%s %llu %llu %llu %llu %llu %llu\n",
-	     input_filename,
-	     result.overall,
-	     result.horizontal,
-	     result.vertical,
-
-	     result.square,
-	     result.square_horizontal,
-	     result.square_vertical);
-
-      if (verbose)
-	fprintf(stderr, "\n");
-
-
-
+      process_1file(input_filename);
     }
 
   exit(0);
