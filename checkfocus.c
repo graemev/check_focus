@@ -73,7 +73,7 @@ static void calculate_contrast(int               row,
 }
 
 
-int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
+static int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
 {
   struct jpeg_decompress_struct cinfo;
   struct jpeg_error_mgr         jerr;

@@ -25,9 +25,8 @@ struct Cf_stats
 } ;
   
 
-extern int read_jpeg_file(FILE * const input_file, struct Cf_stats * result);
 
-/* originaly defined by jmorecfg.h, but now oftem suppressed */
+/* originaly defined by jmorecfg.h, but now often suppressed */
 #ifndef RGB_RED 
 #define RGB_RED         0       /* Offset of Red in an RGB scanline element */
 #define RGB_GREEN       1       /* Offset of Green */
@@ -47,10 +46,12 @@ struct box
 
 /* Method signatures */
 
+extern Cf_stat diff             (unsigned char one, unsigned char other );
+
 extern CF_BOOL inbox            (struct box *p, int row, int column);
 extern CF_BOOL box_defined      (struct box *p);
 extern void    copy_box         (struct box *to, struct box *from);
-extern Cf_stat diff             (unsigned char one, unsigned char other );
+
 extern void    dump_3component  (unsigned char comp[]);
 extern void    dump_1component  (unsigned char comp[]);
 extern void    dump_1row        (int output_components, JSAMPARRAY buffer, JDIMENSION output_width);  
