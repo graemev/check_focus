@@ -1,0 +1,133 @@
+check_focus (package) at this time contains two tool:
+
+	    checkfocus & bestfocus
+
+Checkfocus Is the "broad brush" tool, it describes the overall picture and the centre part
+
+Bestfocus: Is a more narrow focus (pun unintended) tool, it can find the "best
+small box" of focus.
+
+
+Which tool you use depends on your style of photography and your workflow. If
+your images consist of a large central figure which should be in focus
+(portrait) or a wide area all in focus (Landscape) then checkfocus may be enough
+and is the faster tool.  If your photos contain lots of nice Bokeh and a small
+area in sharp focus, then you might do better with bestfocus. The latter tools
+has lots of tuning options you may settle on a "usual suspects" set which suit your
+photographic style (e.g. your images are always 4000x6000 and you need an area of
+at least 100x150 for it to be a success ....but the location moves around a lot)
+
+Note focus has a very specific meaning WRT this tool (it's contrast based) it
+can produce some unexpected results.
+
+This is the TL;DR version. To see how to really use the tools, read the man pages
+(or in the extreme "use the source Luke" )
+
+(I've added some blanks to ease human understanding)
+
+This is an image of a drone almost hitting the camera (in another drone) in a
+high speed pass '-sharp' is "OK", '-blurred' has been deliberately blurred (in gimp)
+and '-focused' has a small focus area just round the drone and the rest is blurred.
+
+                           Overall    Hoiz    Vert        Box     Boxh      Boxv
+$ ./checkfocus drone*.jpg 
+drone-blured.jpg           22357791   4864803  17492988   988237  268736    719501
+drone-focused.jpg          66158661  25155372  41003289   405334  116660    288674
+drone-sharp.jpg           320541267  74258203 246283064 13836176 3535124  10301052
+
+So overall '-sharp' is clear winner. Still wins considering just Horizontal Or Vertical (buts closer)
+looking at the (default) centre box sharp is way better, so the "in focus" is proably not the centre.
+
+
+$ ./bestfocus drone*.jpg 
+drone-blured.jpg    74539 (492:140-503:146)
+drone-focused.jpg 1120411 (456:140-467:146)
+drone-sharp.jpg   1136823 (552:406-563:412)
+
+Here a much smaller box is defined (only 11x6) so the "best" focus box in
+'-focused' is [456:140-467:146] but '-sharp' has a slightly better box. So the
+blurred out bit was the background, so something in that background was in
+slightly better focus than the drone. This points out a shortcomming of this
+approach; a photograph of your child, where the bush on the right is in perfect
+focus and their head is blurred is proably a "fail" but that's a human decision.
+
+So you could envisage a workflow starting:
+
+./checkfocus drone*.jpg | sort -nr -k2   # sorts overall sharpness decending
+drone-sharp.jpg 320541267 74258203 246283064 13836176 3535124 10301052
+drone-focused.jpg 66158661 25155372 41003289 405334 116660 288674
+drone-blured.jpg 22357791 4864803 17492988 988237 268736 719501
+
+$ ./checkfocus drone*.jpg | sort -nr -k5  # sorts centre box sharpness decending
+drone-sharp.jpg 320541267 74258203 246283064 13836176 3535124 10301052
+drone-blured.jpg 22357791 4864803 17492988 988237 268736 719501
+drone-focused.jpg 66158661 25155372 41003289 405334 116660 288674
+
+Here interestingly '-blurred' beats '-focused' . Turns out the drone is off
+centre (outside box) so both are looking at the same out of focus area. However
+'-focused' has been edited more often and saved at (very slightly) higher
+compression so it's a 6% smaller file (it's slightly more blurred).
+
+
+
+checkfocus:
+
+Usage:   checkfocus [-v|--verbose]
+                    [-d|--debug]
+		    [-r|--red|-b|--blue|-g|--green]
+		    [-B x:y-x:y|--box x:y-x:y]
+		    [-f <filelistname>|--file <filelistname>]
+		    <list of filenames>
+		    
+-v or --verbose produce more verbose output, can be repeated for more verbosity
+
+-d or --debug produce debug output on stderr, can be repeated for more verbosity
+
+-r|--red|-b|--blue|-g|--green
+
+    base the calculations on reg/green or blue channels, default is green, ignored
+    for greyscale
+
+-B x:y-x:y|--box x:y-x-y,
+
+   where 0,0 is top LH corner of image, x is column, y is row. Defines a smaller
+   'box' to analyse'
+
+[-f <filelistname>|--file <filelistname>]
+    filelistname is a file which contains a list of files, one per line. These are
+    processed before <list of filenames>
+
+
+bestfocus:
+
+Usage:   bestfocus [-v|--verbose]
+       		   [-d|--debug]
+		   [-r|--red|-b|--blue|-g|--green]
+		   [-f <filelistname>|--file <filelistname>]
+		   <list of filenames>
+
+-v or --verbose produce more verbose output, can be repeated for more verbosity
+-d or --debug produce debug output on stderr, can be repeated for more verbosity
+
+-r|--red|-b|--blue|-g|--green
+
+    base the calculations on reg/green or blue channels, default is green, ignored
+    for greyscale
+	
+-f <filelistname>|--file <filelistname>
+
+   filelistname is a file which contains a list of files, one per line. These are
+   processed before <list of filenames>
+
+-b <cols>:<rows>|--box <cols>:<rows>
+-H <hframes> | -hframes <hframes>
+-V <vframes> | -vframes <vframes>
+
+The Image is divided into <hframe> Horizontal frames by <vframe> Vertical frames
+A 2nd set of alternate frames is defined midways (horizontally & vertically) between frames
+In each frame a focus box is defined <cols>:<rows>
+The focus box with the highest contrast store is output
+
+<hframes> defaults to: HFRAMES <vframes> defaults to: VFRAMES 
+The box size defaults to the entire frame
+

@@ -1,0 +1,14 @@
+To build from scratch
+
+SETUP_4_AUTOMAKE.sh
+
+autoreconf -i   # this does automake and well as autoconf
+
+./configure
+
+make
+
+make dist
+
+
+
