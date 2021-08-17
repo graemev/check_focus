@@ -27,19 +27,23 @@ static Cf_fudge hfudge=1.0;	 /* fudge factor for scores horozontal/vertical/over
 static Cf_fudge vfudge=1.0;
 static Cf_fudge fudge=1.0;
 
+/* Limits set quite broad, not really under/over exposed, but if eg. 98% of your image is "dark" it's proably no good */
+static unsigned char overexposed_limit  = 255-25;
+static unsigned char underexposed_limit = 0+25;
+
 
 struct Scores
 {
   struct Cf_scores  image;       /* scores for the whole image     */
   struct Cf_scores  centre_box;  /* scores for just the centre box */
+  int               overexposed; /* Number of cells (on the given channel) at or above limit */
+  int               underexposed;
+  int               samples;
 };
 
 /*
  * Descr:   Collects status info on the focus of a given image
- * @param:  file open FD (e.g. jpeg) 
- * @param:  result struct of useful stats about the jpeg
  * @Author: Graeme Vetterlein
- * @return: Return 0 if successful, -1 if failed
  */
 
 
@@ -81,6 +85,15 @@ static void calculate_contrast(int               row,
 	  result->centre_box.horizontal += intercol_value;
 	  result->centre_box.vertical   += interrow_value;
 	}
+
+      if (p[focus_channel] >= overexposed_limit)
+	++result->overexposed;
+
+      if (p[focus_channel] <= underexposed_limit)
+	++result->underexposed;
+
+      ++result->samples;
+      
 	/* step to the next component */
       p+=output_components;
       q+=output_components;
@@ -122,6 +135,9 @@ static int read_jpeg_file(FILE * const infile, struct Scores * result)
   result->centre_box.horizontal = 0;
   result->centre_box.vertical   = 0;
 
+  result->overexposed           = 0;
+  result->underexposed          = 0;
+  result->samples               = 0;
   
   cinfo.err = jpeg_std_error(&jerr);   /* standard error handling (writes to stderr) */
         
@@ -308,14 +324,17 @@ static int process_1file(char * input_filename)
 
   read_jpeg_file(input_file, &result);
 
-  printf("%s %llu %llu %llu %llu %llu %llu\n",
+  printf("%s %llu %llu %llu %llu %llu %llu %d %d\n",
 	 input_filename,
 	 adjust(result.image.overall,         shift, fudge),  /* we only fudge the overall score, box is smaller (so fixed if required) */
 	 adjust(result.image.horizontal,      shift, hfudge),
 	 adjust(result.image.vertical,        shift, vfudge),	 
 	 adjust(result.centre_box.overall,    shift, 0.0),
 	 adjust(result.centre_box.horizontal, shift, 0.0),
-	 adjust(result.centre_box.vertical,   shift, 0.0));
+	 adjust(result.centre_box.vertical,   shift, 0.0),
+	 (100*result.overexposed)/result.samples,             /* Order of evaluation is important */
+	 (100*result.underexposed)/result.samples             /* %age of cells at or below limit */
+	 );
   
   if (verbose)
     fprintf(stderr, "\n");
@@ -335,31 +354,34 @@ int main(int argc, char **argv)
   char *filelist  = NULL;
   char *boxstring = NULL;
   char *fudgebox  = NULL;
-
+  int   x;
   
-  int c;
+  int   c;
 
   while (1)
     {
       int option_index = 0;
       static struct option long_options[] =
 	{
-	 /* name     has_arg,           flag, val */
-	 {"debug",   no_argument,       0,    'd' },
-	 {"verbose", no_argument,       0,    'v' },
-	 {"red",     no_argument,       0,    'r' },
-	 {"blue",    no_argument,       0,    'b' },
-	 {"green",   no_argument,       0,    'g' },
-	 {"file",    required_argument, 0,    'f' },
-	 {"box",     required_argument, 0,    'B' },
-	 {"shift",   required_argument, 0,    's' },
-	 {"fudge",   optional_argument, 0,    'F' },
+	 /* name           has_arg,           flag, val */
+	 {"debug",         no_argument,       0,    'd' },
+	 {"verbose",       no_argument,       0,    'v' },
+	 {"red",           no_argument,       0,    'r' },
+	 {"blue",          no_argument,       0,    'b' },
+	 {"green",         no_argument,       0,    'g' },
+	 {"file",          required_argument, 0,    'f' },
+	 {"box",           required_argument, 0,    'B' },
+	 {"shift",         required_argument, 0,    's' },
+	 {"fudge",         optional_argument, 0,    'F' },
+	 {"overexposed",   required_argument, 0,    'o' },
+	 {"underexposed",  required_argument, 0,    'u' },
+
 	 {0,         0,                 0,    0 }
 	};
       
       c = getopt_long(argc,
 		      argv,
-		      "dvrbgf:B:s:F::",
+		      "dvrbgf:B:s:F::o:u:",
 		      long_options,
 		      &option_index);
       
@@ -408,6 +430,22 @@ int main(int argc, char **argv)
 	    fudgebox="";
 	  break;
 
+	case 'o':
+	  x=atoi(optarg);
+	  if (x < 0 || x > 255)
+	      fprintf(stderr, "--overexposed must be in range 0-255, setting ignored");
+	  else
+	    overexposed_limit=x;
+	  break;
+
+	case 'u':
+	  x=atoi(optarg);
+	  if (x < 0 || x > 255)
+	      fprintf(stderr, "--underexposed must be in range 0-255, setting ignored");
+	  else
+	    underexposed_limit=x;
+	  break;
+
 	default:
 	  usage(argv[0]);
 	  exit(1);
@@ -415,8 +453,13 @@ int main(int argc, char **argv)
     }
 
   if (verbose)
+    {
     fprintf(stderr, "Package %s[%s] %s - check overall image focus\n", PACKAGE_NAME, PACKAGE_VERSION, argv[0]);
-
+    fprintf(stderr, "Overexposure limit set to %d\n"
+	            "Underexposure limit set to %d\n",
+	            overexposed_limit,
+	            underexposed_limit);
+    }
   
   if (debug)
     fprintf(stderr, "Following getopt %d arguments remain\n", argc-optind);
@@ -453,9 +496,7 @@ int main(int argc, char **argv)
 	{
 	  fprintf(stderr, "Will use a fixed box of %d:%d-%d:%d\n", box.first_column, box.first_row, box.last_column, box.last_row);
 	}
-      
     }
-
 
   if (fudgebox)
     {

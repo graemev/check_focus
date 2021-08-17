@@ -1,5 +1,5 @@
 #AC_PREREQ(??? do we have one???)
-AC_INIT([check_focus],[0.2])
+AC_INIT([check_focus],[0.3])
 AC_CONFIG_FILES([Makefile])
 # Check for (the exsistance of) various programs
 AC_PROG_CC
