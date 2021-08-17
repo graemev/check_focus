@@ -2,9 +2,6 @@
 #include <getopt.h>
 #include <string.h>
 
-static int debug=0;
-static int verbose=0;
-
 /* defined by jmorecfg.h ... */
 //#define RGB_RED         0       /* Offset of Red in an RGB scanline element */
 //#define RGB_GREEN       1       /* Offset of Green */
@@ -14,10 +11,28 @@ static int verbose=0;
 
 static int   channel = RGB_GREEN;
 
-static char *filelist  = NULL;
-static char *boxstring = NULL;
-
 static struct box box = {0,0,0,0};
+
+static int shift=0;              /* Shift right N places on output */
+
+/* default Fudge image size (a 96MP image) other images are in relation to this */
+#define FUDGEROWS 12000
+#define FUDGECOLS 8000
+
+static int fudge_rows=0;
+static int fudge_columns=0;
+
+
+static Cf_fudge hfudge=1.0;	 /* fudge factor for scores horozontal/vertical/overall */
+static Cf_fudge vfudge=1.0;
+static Cf_fudge fudge=1.0;
+
+
+struct Scores
+{
+  struct Cf_scores  image;       /* scores for the whole image     */
+  struct Cf_scores  centre_box;  /* scores for just the centre box */
+};
 
 /*
  * Descr:   Collects status info on the focus of a given image
@@ -36,7 +51,7 @@ static void calculate_contrast(int               row,
 			       JSAMPARRAY        prev_buffer,
 			       JSAMPARRAY        this_buffer,
 			       struct box      * this_box,
-			       struct Cf_stats * result)
+			       struct Scores   * result)
 {
   int             col;
   unsigned char * p;
@@ -56,15 +71,15 @@ static void calculate_contrast(int               row,
 	}
 
       
-      result->overall    += interrow_value + intercol_value;
-      result->horizontal += intercol_value;
-      result->vertical   += interrow_value;
+      result->image.overall    += interrow_value + intercol_value;
+      result->image.horizontal += intercol_value;
+      result->image.vertical   += interrow_value;
 
-      if (inbox(this_box, row, col))
+      if (inbox(this_box, col, row))
 	{
-	  result->square            += interrow_value + intercol_value;
-	  result->square_horizontal += intercol_value;
-	  result->square_vertical   += interrow_value;
+	  result->centre_box.overall    += interrow_value + intercol_value;
+	  result->centre_box.horizontal += intercol_value;
+	  result->centre_box.vertical   += interrow_value;
 	}
 	/* step to the next component */
       p+=output_components;
@@ -73,7 +88,7 @@ static void calculate_contrast(int               row,
 }
 
 
-static int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
+static int read_jpeg_file(FILE * const infile, struct Scores * result)
 {
   struct jpeg_decompress_struct cinfo;
   struct jpeg_error_mgr         jerr;
@@ -99,13 +114,13 @@ static int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
 
   struct box	this_box;
 
-  result->overall = 0;
-  result->horizontal = 0;
-  result->vertical = 0;
+  result->image.overall    = 0;
+  result->image.horizontal = 0;
+  result->image.vertical   = 0;
 
-  result->square= 0;
-  result->square_horizontal =0;
-  result->square_vertical =0;
+  result->centre_box.overall    = 0;
+  result->centre_box.horizontal = 0;
+  result->centre_box.vertical   = 0;
 
   
   cinfo.err = jpeg_std_error(&jerr);   /* standard error handling (writes to stderr) */
@@ -140,10 +155,10 @@ static int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
       int mid_row         = output_height/2;
       int mid_column      = output_width/2;
 
-      this_box.first_row     = mid_row - box_half_width;  /* so total box is 10% of image, in the centre */
-      this_box.last_row      = mid_row + box_half_width;
-      this_box.first_column  = mid_column - box_half_height;
-      this_box.last_column   = mid_column + box_half_height;
+      this_box.first_row     = mid_row - box_half_height;  /* so total box is 10% of image, in the centre */
+      this_box.last_row      = mid_row + box_half_height;
+      this_box.first_column  = mid_column - box_half_width;
+      this_box.last_column   = mid_column + box_half_width;
     }
 
   if (verbose)
@@ -163,6 +178,56 @@ static int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
   
   row_stride = cinfo.output_width * cinfo.output_components; /* in bytes */
 
+  if (fudge_rows)
+    {
+      double xscale;
+      double yscale;
+      double scale;
+
+      if (output_width > fudge_columns || output_height > fudge_rows)
+	{
+	  fprintf(stderr, "Actual image cols:row (%d:%d) exceeds fudge size (%d:%d), no fudging will be done\n",
+		  output_width , output_height, fudge_columns,  fudge_rows);
+
+	  hfudge = vfudge = fudge = 1.0;
+	}
+
+      xscale = (double)fudge_columns              / (double)output_width;   /* >= 1 */
+      yscale = (double)fudge_rows                 / (double)output_height;  /* >= 1 */
+      scale =  (double)(fudge_rows+fudge_columns) / (double)(output_height+output_height);  /* >= 1 */
+
+      /* consider fudge size was (the default of) 12000x8000 an actual image was
+	 6000x4000, then scale=xscale=yscale=2, so the fudge factor would be
+	 sqrt(2) = 1.41 so if this image got a score of 1000, then it's
+	 "equivalent" to a 12000x800 image that got a score of 1410.  Just
+	 because the bigger image had more pixels contributing to it's score.
+
+	 This allows one to compare a 6000x4000 image (fudge factor = 1.41) with
+	 a 3000x2000 image (fudge factor = 2) .  This is far from an exact
+	 science, if you shink an image it actally gets sharper if you (blurred
+	 grey line becomes a sharp black line) if you enlarge an image it gets
+	 fuzzier; but if an image with 200 horizontal lines (at a certain level
+	 of focus) were compared with a 400 line image (at same level of focus),
+	 withot fudging, the latter would win because it had more lines
+	 contributing.
+	 
+	 Depending on your planned use of a image, it may be better to consider the raw score
+	 or the fudged one.
+
+      */
+      hfudge = sqrt(xscale);
+      vfudge = sqrt(yscale);
+      fudge  = sqrt(scale);
+    }
+
+
+  if (verbose)
+    {
+      fprintf(stderr, "Fudge Factors Horizontal=%1.3G, vertical=%1.3G, overall=%1.3G \n", hfudge, vfudge, fudge);
+      fprintf(stderr, "Bits to right shift scores=%d\n", shift);
+     }
+
+  
   /* Use internal memory manager to give us a buffer ..sadly (and undocumented) it wants BYTES not components */
   buffer1 = (cinfo.mem->alloc_sarray) ((j_common_ptr) &cinfo,
 				       JPOOL_IMAGE,            /* just for this (jpeg) image */
@@ -220,6 +285,7 @@ static void usage(char prog[])
                   "-d or --debug produce debug output on stderr, can be repeated for more verbosity\n"
 	          "[-r|--red|-b|--blue|-g|--green] base the calculations on reg/green or blue channels, default is green, ignored for greyscale\n"
 		  "-B x:y-x:y|--box x:y-x-y, where 0,0 is top LH corner of image, x is colum, y is row. Defines a smaller 'box' to analyse'\n"
+		  "-s <bits>|--shift <bits> shift the output scores <bits> right. Simply to reduce the scale of numbers to avoid breaking other tools using this data\n"
 		  "[-f <filelistname>|--file <filelistname>] filelistname is a file which contains a list of files, one per line. These are processed before <list of filenames>\n"
 	  , prog);
 }
@@ -229,7 +295,7 @@ static int process_1file(char * input_filename)
 {
   
   FILE           *input_file;
-  struct Cf_stats result;
+  struct Scores result;
 
   if (verbose)
     fprintf(stderr, "Processing file: [%s]\n", input_filename);
@@ -244,17 +310,18 @@ static int process_1file(char * input_filename)
 
   printf("%s %llu %llu %llu %llu %llu %llu\n",
 	 input_filename,
-	 result.overall,
-	 result.horizontal,
-	 result.vertical,
-
-	 result.square,
-	 result.square_horizontal,
-	 result.square_vertical);
-
+	 adjust(result.image.overall,         shift, fudge),  /* we only fudge the overall score, box is smaller (so fixed if required) */
+	 adjust(result.image.horizontal,      shift, hfudge),
+	 adjust(result.image.vertical,        shift, vfudge),	 
+	 adjust(result.centre_box.overall,    shift, 0.0),
+	 adjust(result.centre_box.horizontal, shift, 0.0),
+	 adjust(result.centre_box.vertical,   shift, 0.0));
+  
   if (verbose)
     fprintf(stderr, "\n");
 
+  fclose(input_file);
+  
   return 0;
 }
 
@@ -263,8 +330,13 @@ static int process_1file(char * input_filename)
 int main(int argc, char **argv)
 {
   char           *input_filename;
-  struct Cf_stats result;
+  struct Scores   result;
 
+  char *filelist  = NULL;
+  char *boxstring = NULL;
+  char *fudgebox  = NULL;
+
+  
   int c;
 
   while (1)
@@ -280,12 +352,14 @@ int main(int argc, char **argv)
 	 {"green",   no_argument,       0,    'g' },
 	 {"file",    required_argument, 0,    'f' },
 	 {"box",     required_argument, 0,    'B' },
+	 {"shift",   required_argument, 0,    's' },
+	 {"fudge",   optional_argument, 0,    'F' },
 	 {0,         0,                 0,    0 }
 	};
       
       c = getopt_long(argc,
 		      argv,
-		      "dvrbgf:B:",
+		      "dvrbgf:B:s:F::",
 		      long_options,
 		      &option_index);
       
@@ -323,25 +397,40 @@ int main(int argc, char **argv)
 	  boxstring=optarg;
 	  break;
 
+	case 's':
+	  shift=atoi(optarg);
+	  break;
+
+	case 'F':
+	  if (optarg)
+	    fudgebox=optarg;
+	  else
+	    fudgebox="";
+	  break;
+
 	default:
 	  usage(argv[0]);
 	  exit(1);
 	}
     }
 
+  if (verbose)
+    fprintf(stderr, "Package %s[%s] %s - check overall image focus\n", PACKAGE_NAME, PACKAGE_VERSION, argv[0]);
+
+  
   if (debug)
     fprintf(stderr, "Following getopt %d arguments remain\n", argc-optind);
 
 
   if (debug)
     {
-      result.overall  = 0;
-      result.overall -= 1;
+      result.image.overall  = 0;
+      result.image.overall -= 1;
       
       fprintf(stderr, "The size of stats is %ld\n"
 	              "It's maximum value is %llu\n",
-	      sizeof(result.overall),
-	      result.overall);
+	      sizeof(result.image.overall),
+	      result.image.overall);
     }
 
 
@@ -359,8 +448,43 @@ int main(int argc, char **argv)
       
       box.last_column=bottomx;
       box.last_row=bottomy;
+
+      if (verbose)
+	{
+	  fprintf(stderr, "Will use a fixed box of %d:%d-%d:%d\n", box.first_column, box.first_row, box.last_column, box.last_row);
+	}
+      
     }
 
+
+  if (fudgebox)
+    {
+      int rows;
+      int columns;
+
+      if (fudgebox[0] == '\0')
+	{
+	  rows    = FUDGEROWS;
+	  columns = FUDGECOLS;
+	}
+      else
+	{
+	  if (sscanf(fudgebox, "%d:%d", &rows, &columns ) !=2)
+	    {
+	      fprintf(stderr, "Syntax error in --fudge, should be --fudge=x:y value is [%s]\n", fudgebox);
+	      exit(1);
+	    }
+	}
+      
+      fudge_rows    = rows;
+      fudge_columns = columns;
+
+      if (verbose)
+	fprintf(stderr, "Scores will be fudged to match an image of %d:%d\n", fudge_rows, fudge_columns);
+    }
+
+
+  
 #define MAX_FILENAME 4096
   
   if (filelist)
@@ -382,6 +506,7 @@ int main(int argc, char **argv)
 	  indirect_filename[strcspn(indirect_filename, "\n")] = 0;  /* splat out the /n, otherwise bad filename */
 	  process_1file(indirect_filename);
 	}
+      fclose(p_filelist);
     }
   
   /* Trailing args are filename */

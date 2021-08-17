@@ -3,6 +3,11 @@
 #include <stdlib.h>
 #include <jpeglib.h> 
 #include <unistd.h>
+#include <math.h>
+
+extern int debug;
+extern int verbose;
+
 
 
 /* in C99 use stdbool.h ... but here just avoid dependency */
@@ -11,9 +16,20 @@
 #define CF_FALSE 0
 
 typedef unsigned long long Cf_stat;      /* Holds a very big unsigned number */
+typedef double             Cf_fudge;     /* A real number , a fudge factor   */
 
 
-struct Cf_stats
+struct Cf_scores
+{
+  Cf_stat  overall;	 /* sum of nearest neighbour differences */
+  Cf_stat  horizontal;   /* sum of nearest horizontal neighbour differences */
+  Cf_stat  vertical;     /* sum of nearest vertical neighbour differences */
+} ;
+
+
+
+
+struct Cf_stats_NOT
 {
   Cf_stat  overall;	 /* sum of nearest neighbour differences */
   Cf_stat  horizontal;   /* sum of nearest horizontal neighbour differences */
@@ -35,8 +51,15 @@ struct Cf_stats
 #endif
 
 
-
 struct box
+{
+  int first_column;     /* We are "in the box iff: */
+  int first_row;        /* column >= first_column AND <= last_column         */
+  int last_column;	/* row >= first_row       AND <= last_row ... AND .. */
+  int last_row;     
+} ;
+
+struct box_not
 {
   int first_row;        /* We are "in the box iff: */
   int last_row;         /* row >= first_row       AND <= last_row ... AND .. */
@@ -46,9 +69,10 @@ struct box
 
 /* Method signatures */
 
+extern Cf_stat adjust		(Cf_stat input, int shiftr, Cf_fudge fudge_factor);
 extern Cf_stat diff             (unsigned char one, unsigned char other );
 
-extern CF_BOOL inbox            (struct box *p, int row, int column);
+extern CF_BOOL inbox            (struct box *p, int column, int row);
 extern CF_BOOL box_defined      (struct box *p);
 extern void    copy_box         (struct box *to, struct box *from);
 

@@ -120,8 +120,6 @@ int hframes = HFRAMES;
 int cursors = CURSORS;
 
 
-static int debug=0;
-static int verbose=0;
 static int channel = RGB_GREEN;
 static int opt_box_height = 0;
 static int opt_box_width  = 0;
@@ -151,7 +149,7 @@ static CF_BOOL update_box(struct numbered_box *p, int row, int col, int frame_he
 {
   CF_BOOL ended = CF_FALSE;
 
-  if (inbox(&(p->box), row, col))    /* considering just this one box, are we inside it? */
+  if (inbox(&(p->box), col, row))    /* considering just this one box, are we inside it? */
     {
       p->stat                += interrow_value + intercol_value;  /* TBD use a flag to limit to just horizontal or vertical */
     }
@@ -197,8 +195,7 @@ static void box_contrast(int               row,
 			 int		   focus_channel,
 			 JSAMPARRAY        this_buffer,
 			 JSAMPARRAY        prev_buffer,
-			 int		   frame_height,
-			 struct Cf_stats * result)
+			 int		   frame_height)
 {
   int             col;
   int		  i;
@@ -236,7 +233,7 @@ static void box_contrast(int               row,
 
 
 
-static int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
+static int read_jpeg_file(FILE * const infile)
 {
   struct jpeg_decompress_struct cinfo;
   struct jpeg_error_mgr         jerr;
@@ -429,7 +426,7 @@ static int read_jpeg_file(FILE * const infile, struct Cf_stats * result)
       (void) jpeg_read_scanlines(&cinfo, *this_row, 1);
       ++row;
 
-      box_contrast(row, output_width, output_components, focus_channel, *this_row, *prev_row, frame_height, result);
+      box_contrast(row, output_width, output_components, focus_channel, *this_row, *prev_row, frame_height);
 
       temp_row    = prev_row;
       prev_row    = this_row;   /* what was current, now becomes previous  */
@@ -472,7 +469,6 @@ static void usage(char prog[])
 static int process_1file(char * input_filename)
 {
   FILE           *input_file;
-  struct Cf_stats result;
 
   time_t start = time(NULL);
   time_t end;
@@ -485,7 +481,7 @@ static int process_1file(char * input_filename)
     return -1;
   }
 
-  read_jpeg_file(input_file, &result);
+  read_jpeg_file(input_file);
 
   if (verbose)
     {
@@ -596,8 +592,10 @@ int main(int argc, char **argv)
 	  exit(1);
 	}
     }
-
-
+      
+  if (verbose)
+    fprintf(stderr, "Package %s[%s] %s - find best area of focus\n", PACKAGE_NAME, PACKAGE_VERSION, argv[0]);
+  
   cursors = hframes*2;
 
   if (debug)

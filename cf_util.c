@@ -1,6 +1,41 @@
 #include "checkfocus.h"
 
-CF_BOOL inbox(struct box * p, int row, int column)
+int debug=0;
+int verbose=0;
+
+
+
+/* we  need to mess around with fixed and floating point math */
+Cf_stat adjust(Cf_stat input, int shiftr, Cf_fudge fudge_factor)
+{
+  Cf_stat output;
+
+  if (debug)
+    fprintf(stderr, "adjust given args input=%llu, shift=%d,fudge_factor=%1.3g\n",
+	    input, shiftr, fudge_factor);
+  
+  output=input;       /* unless we change something */
+
+  if (shiftr)         /* just scale all the numbers down ,, in case other tools can't cope */
+    output>>=shiftr;
+
+  if (debug)
+    fprintf(stderr, "adjust following shift; output=%llu\n",
+	    output);
+
+  
+  if (fudge_factor != 0.0 && fudge_factor != 1.0)  /* we lose precision doing floating point, so only get into it if necessary */
+    output = (Cf_stat) (fudge_factor * (Cf_fudge)output );  /* fixed to float, float multiply, then back to fixed */
+
+  if (debug)
+    fprintf(stderr, "adjust following fudge_factoring; output=%llu\n",
+	    output);
+  
+  return (output);
+}
+
+
+CF_BOOL inbox(struct box * p, int column, int row)
 {
   return ( row >= p->first_row && row <= p->last_row  &&  column >= p->first_column && column <= p->last_column);
 }
