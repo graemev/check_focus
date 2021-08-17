@@ -12,3 +12,11 @@ make dist
 
 
 
+git clone --bare .git check_focus.git     # Creates a "bare" (no checkout) repo, just here locally
+mv check_focus.git  /rtmp/                ' Move it onto the NAS ...now need to shift it around om the box (and change perms)
+
+[graeme@qnap451plus rtmp]$ mv check_focus.git/  /share/git/
+[admin@qnap451plus git]# chown -R git: check_focus.git/
+
+## git remote add origin git://zbox.home/check_focus  # Create the GIT repo (NB it's systemD start on IP port access)
+## git push --set-upstream origin master
