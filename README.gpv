@@ -18,5 +18,28 @@ mv check_focus.git  /rtmp/                ' Move it onto the NAS ...now need to 
 [graeme@qnap451plus rtmp]$ mv check_focus.git/  /share/git/
 [admin@qnap451plus git]# chown -R git: check_focus.git/
 
-## git remote add origin git://zbox.home/check_focus  # Create the GIT repo (NB it's systemD start on IP port access)
-## git push --set-upstream origin master
+git remote add origin git://zbox.home/check_focus  # Create the GIT repo (NB it's systemD start on IP port access)
+git push --set-upstream origin master
+
+
+graeme@real:~/src/check_focus$ git remote add origin git://zbox.home/check_focus
+fatal: remote origin already exists.
+
+graeme@real:~/src/check_focus$ git push --set-upstream origin master
+Branch 'master' set up to track remote branch 'master' from 'origin'.
+Everything up-to-date
+
+graeme@real:~/src/check_focus$ git add README.gpv 
+
+graeme@real:~/src/check_focus$ git commit -m "details of how to add GIT repo"
+[master 0688714] details of how to add GIT repo
+ 1 file changed, 8 insertions(+)
+graeme@real:~/src/check_focus$ git push
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 659 bytes | 659.00 KiB/s, done.
+Total 3 (delta 1), reused 0 (delta 0)
+To git://zbox.home/check_focus
+   5fd4692..0688714  master -> master
