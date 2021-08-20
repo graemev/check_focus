@@ -16,8 +16,8 @@ static struct box box = {0,0,0,0};
 static int shift=0;              /* Shift right N places on output */
 
 /* default Fudge image size (a 96MP image) other images are in relation to this */
-#define FUDGEROWS 12000
-#define FUDGECOLS 8000
+#define FUDGEROWS 8000
+#define FUDGECOLS 12000
 
 static int fudge_rows=0;
 static int fudge_columns=0;
@@ -40,6 +40,9 @@ struct Scores
   int               underexposed;
   int               samples;
 };
+
+static char *current_filename;   /* used ONLY for error messages ... poor encapsulation */
+
 
 /*
  * Descr:   Collects status info on the focus of a given image
@@ -202,8 +205,8 @@ static int read_jpeg_file(FILE * const infile, struct Scores * result)
 
       if (output_width > fudge_columns || output_height > fudge_rows)
 	{
-	  fprintf(stderr, "Actual image cols:row (%d:%d) exceeds fudge size (%d:%d), no fudging will be done\n",
-		  output_width , output_height, fudge_columns,  fudge_rows);
+	  fprintf(stderr, "Actual image %s cols:row (%d:%d) exceeds fudge size (%d:%d), no fudging will be done\n",
+		  current_filename, output_width , output_height, fudge_columns,  fudge_rows);
 
 	  hfudge = vfudge = fudge = 1.0;
 	}
@@ -296,13 +299,20 @@ static int read_jpeg_file(FILE * const infile, struct Scores * result)
 
 static void usage(char prog[])
 {
-  fprintf(stderr, "Usage: %s [-v|--verbose][-d|--debug][-r|--red|-b|--blue|-g|--green][-B x:y-x:y|--box x:y-x:y][-f <filelistname>|--file <filelistname>] <list of filenames>\n"
+  fprintf(stderr, "Usage: %s [-v|--verbose][-d|--debug][-r|--red|-b|--blue|-g|--green]\n"
+	          "[-B x:y-x:y|--box x:y-x:y][-f <filelistname>|--file <filelistname>] [-F[<rows:cols>] | --fudge=[<row:col>]\n"
+	          "[-o<0-255>] | --overexposed=<0-255> [-u<0-255>] | --underxposed=<0-255> <list of filenames>\n"
+	  
                   "-v or --verbose produce more verbose output, can be repeated for more verbosity\n"
                   "-d or --debug produce debug output on stderr, can be repeated for more verbosity\n"
 	          "[-r|--red|-b|--blue|-g|--green] base the calculations on reg/green or blue channels, default is green, ignored for greyscale\n"
 		  "-B x:y-x:y|--box x:y-x-y, where 0,0 is top LH corner of image, x is colum, y is row. Defines a smaller 'box' to analyse'\n"
 		  "-s <bits>|--shift <bits> shift the output scores <bits> right. Simply to reduce the scale of numbers to avoid breaking other tools using this data\n"
 		  "[-f <filelistname>|--file <filelistname>] filelistname is a file which contains a list of files, one per line. These are processed before <list of filenames>\n"
+		  "[-F[<rows:cols>] | --fudge=[<row:col>] {note the syntax} defines a fudgebox, adjusts score to match this\n"
+		  "[-o<0-255>] | --overexposed=<0-255> default is 230 \n"
+		  "[-u<0-255>] | --underxposed=<0-255> default is 25\n"
+
 	  , prog);
 }
 
@@ -544,6 +554,7 @@ int main(int argc, char **argv)
 
       while (fgets(indirect_filename, MAX_FILENAME, p_filelist))
 	{
+	  current_filename = indirect_filename;
 	  indirect_filename[strcspn(indirect_filename, "\n")] = 0;  /* splat out the /n, otherwise bad filename */
 	  process_1file(indirect_filename);
 	}
@@ -555,6 +566,7 @@ int main(int argc, char **argv)
   for (;optind < argc; ++optind)
     {
       input_filename = argv[optind];
+      current_filename = input_filename;
 
       process_1file(input_filename);
     }

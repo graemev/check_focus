@@ -104,8 +104,8 @@
 /* 500x500 frames would be 250,000 frames, hence similar number of focus boxes ... lots of Maths */
 #define MAX_HFRAMES (500)
 
-#define HFRAMES (100)
-#define VFRAMES (100)
+#define HFRAMES (10)
+#define VFRAMES (10)
 
 /* eg 100 primary (and 100 secondary) so 200 total boxes (ie on paper) */
 #define PBOXES (HFRAMES*VFRAMES)
