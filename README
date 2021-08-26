@@ -69,7 +69,6 @@ centre (outside box) so both are looking at the same out of focus area. However
 compression so it's a 6% smaller file (it's slightly more blurred).
 
 
-
 checkfocus:
 
 Usage:   checkfocus [-v|--verbose]

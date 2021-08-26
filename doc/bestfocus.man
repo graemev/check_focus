@@ -20,7 +20,7 @@ bestfocus \- finds the area of best focus in a jpeg image
 [\fB\-H\fR \fI<hframes>\fR
 [\fB\-\-hframes[\fR\fI<hframes>]\fR
 [\fB\-V\fR \fI<vframes>\fR
-[\fB\-\-fvframes[\fR\fI<vframes>]\fR
+[\fB\-\-vframes[\fR\fI<vframes>]\fR
 .IR files ...
 .SH DESCRIPTION
 .B bestfocus
@@ -38,25 +38,35 @@ The <square> score can be compared with the <square> score in \fBcheckfocus(1)\f
 .BR \-v ", " \-\-verbose\fR
 Enables verbose mode. It can be repeated to make output more verbose.
 .Tp
+.PP
 .BR \-d ", " \-\-debug\fR
 Enables debug mode. It can be repeated to make output more verbose.
 .Tp
+.PP
 .BR \-r ", " \-\-red ", " \-b ", " \-\-blue ", " \-g ", " \-\-green\fR
 Choose the channel to use for analysis, ignored for greyscale images, defaults to green
 .Tp
-.BR \-B \fI\ <X:Y>\ \fR ", " \-\-box \fI\ <X:Y>\ \fR
+.PP
+.BR \-B \fI\ <X:Y>\ \fR ", "
+.BR \-\-box \fI\ <X:Y>\ \fR
 Defines the size (only, not location) of the BESTBOX. One of these is checked in each FRAME (see hframe/vframe) this what is checked for good focus
 .Tp
-.BR \-H \fI\ <hframes>\ \fR ", " \-\-hframes \fI\ <hframes>\ \fR
+.PP
+.BR \-H \fI\ <hframes>\ \fR ", "
+.BR \-\-hframes \fI\ <hframes>\ \fR
 Defines how many frames per row
 .Tp
-.BR \-V \fI\ <vframes>\ \fR ", " \-\-vframes \fI\ <vframes>\ \fR
+.PP
+.BR \-V \fI\ <vframes>\ \fR ", "
+.BR \-\-vframes \fI\ <vframes>\ \fR
 Defines how many frames per column. hframes and vframes together define how many frames exist over the whole image. e.g 10x10 would define 10x10x2 = 200 frames
 each frame would host a single focus box. So, for example given a 3000x2000 image, with hframe=30 vframe=20 would define 1200 frames of 100x100. If the focusbox
 was then set to 20:20 you would get 1200 boxes of 20:20, relatively sparse. If instead hframes=150 vframe=100 you would get 30,000 frames if no (focus)box were
 then defined we would also get 30,000 focus boxes of 20x20. The sparse version runs quicker but might miss a "good bit".
 .Tp
-.BR \-f \fI\ FILELISTNAME\ \fR ", " \-\-file \fI\ FILELISTNAME\ \fR
+.PP
+.BR \-f \fI\ FILELISTNAME\ \fR ", "
+.BR \-\-file \fI\ FILELISTNAME\ \fR
 Where \fBfilelistname\fR is a file which contains a list of filenames (one per line) to be process, before files on command line (if any)
 
 .SH EXAMPLES

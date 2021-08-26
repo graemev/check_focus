@@ -57,29 +57,35 @@ Enables debug mode. It can be repeated to make output more verbose.
 Choose the channel to use for analysis, ignored for greyscale images, defaults to green.
 .PP
 .Tp
-.BR \-B \fI\ <X:Y-X:Y>\ \fR ", " \-\-box \fI\ <X:Y-X:Y>\ \fR
+.BR \-B \fI\ <X:Y-X:Y>\ \fR ", "
+.BR \-\-box \fI\ <X:Y-X:Y>\ \fR
 Defines the centrebox (top left corner to bottom right) defaults to a box half the width & height of full image in the centre.
 .PP
 .Tp
-.BR \-f \fI\ FILELISTNAME\ \fR ", " \-\-file \fI\ FILELISTNAME\ \fR
+.BR \-f \fI\ FILELISTNAME\ \fR ", "
+.BR \-\-file \fI\ FILELISTNAME\ \fR
 Where \fBfilelistname\fR is a file which contains a list of filenames (one per line) to be process, before files on command line (if any).
 .PP
 .Tp
-.BR \-s \fI\ bits\ \fR ", " \-\-shift \fI\ BITS\ \fR
+.BR \-s \fI\ bits\ \fR ", "
+.BR \-\-shift \fI\ BITS\ \fR
 Shift the score right by that number of bits, e.g. -s 8 causes all scores to be divided by 256 (2^8).
 .PP
 .Tp
-.BR \-F \fI[ROWS:COLS]\fR ", " \-\-fudge\fI[=ROWS:COLS]\ \fR
+.BR \-F \fI[ROWS:COLS]\fR ", "
+.BR \-\-fudge\fI[=ROWS:COLS]\ \fR
 Fudge the score for whole image (only, not centre) to match that of a bigger image, default is 12000:8000
 iff \-f or \-\-fudge is selected but no value given. Note syntax has no spaces and longform requires an equals sign.
 .PP
 .Tp
-.BR \-o \fI<0-255>\fR ", " \-\-overexposed\fI<0-255>\ \fR
+.BR \-o \fI<0-255>\fR ", "
+.BR \-\-overexposed\fI<0-255>\ \fR
 Defines what is considered overexposed. Defaults to 230, for cartoon/graphic 255 might be a more sensible choice.
 The final figure of %over is the percentage of pixels whos channel value equals or exceeds this.
 .PP
 .Tp
-.BR \-u \fI<0-255>\fR ", " \-\-underexposed\fI<0-255>\ \fR
+.BR \-u \fI<0-255>\fR ", "
+.BR \-\-underexposed\fI<0-255>\ \fR
 Defines what is considered underexposed. Defaults to 25, for cartoon/graphic 0 might be a more sensible choice.
 The final figure of %under is the percentage of pixels whos channel value is less than or equal to this value.
 .SH EXAMPLES
