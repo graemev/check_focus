@@ -115,14 +115,15 @@
 #define MAX_CURSORS (MAX_HFRAMES*2)
 #define CURSORS (HFRAMES*2)  /* TBD chnage to MAX */
 
+/* NB these are small numbers. The number of frames etc ... no JDIMENSION or Tcol etc */
 int vframes = VFRAMES;
 int hframes = HFRAMES;
-int cursors = CURSORS;
+int  cursors = CURSORS;
 
 
-static int channel = RGB_GREEN;
-static int opt_box_height = 0;
-static int opt_box_width  = 0;
+static int        channel        = RGB_GREEN;
+static Trow	  opt_box_height = 0;
+static Tcol	  opt_box_width  = 0;
 
 static char *filelist  = NULL;
 
@@ -141,22 +142,17 @@ static void dump_nbox(struct numbered_box *p)
   fprintf(stderr,"box%03d: Stat=%llu (%d:%d-%d:%d)",
 	  p->box_no,
 	  p->stat,
-	  p->box.first_column, p->box.first_row, p->box.last_column, p->box.last_row);
+	  p->box.first_column, p->box.first_row,
+	  p->box.last_column,  p->box.last_row);
 }
 
 
-static CF_BOOL update_box(struct numbered_box *p, int row, int col, int frame_height, Cf_stat interrow_value, Cf_stat intercol_value)
+static CF_BOOL update_box(struct numbered_box *p, Trow row, Tcol col, Trow frame_height, Cf_stat interrow_value, Cf_stat intercol_value)
 {
-  CF_BOOL ended = CF_FALSE;
+  CF_BOOL new_box = row > p->box.last_row;	/* have gone beyond the end of the box */
 
-  if (inbox(&(p->box), col, row))    /* considering just this one box, are we inside it? */
-    {
-      p->stat                += interrow_value + intercol_value;  /* TBD use a flag to limit to just horizontal or vertical */
-    }
-
-  ended = row >= p->box.last_row;	/* have we reached the final row in this box? */
-
-  if (ended)	/* We've reached the end of this BOX ...shuffle down, we go off the "end" , but code stops at end of image */
+  if (new_box)	/* We've reached beyond the end of this BOX ...shuffle down, we go off the "end" , but code stops at end of image */
+    /* So p points at a given cursor. The row we have is beyond that box, so we can reuse this cursor to describe a new box */
     {
     if (verbose>1)
       {
@@ -183,21 +179,40 @@ static CF_BOOL update_box(struct numbered_box *p, int row, int col, int frame_he
       p->box.last_row  += frame_height;
       p->stat           = 0; /* start again*/
       p->box_no        += hframes;   /* e.g 10 on each row, so same place in next row */
+
+      if (debug)
+	{
+	  fprintf(stderr, "New Box defined: ");
+	  dump_nbox(p);
+	  fprintf(stderr, "\n");
+	}
     }
-  return(ended);
+
+    
+  if (inbox(&(p->box), col, row))    /* considering just this one box, are we inside it? */
+    {
+      p->stat                += interrow_value + intercol_value;  /* TBD use a flag to limit to just horizontal or vertical */
+
+      if (debug >2)
+	fprintf(stderr, "update_box col=%d,row=%d is inside box %d stat=%llu\n", col, row, p->box_no, p->stat );
+    }
+
+
+  
+  return(new_box);
 }
 
 
 /* If a function has more than six argumensts, you missed one */
-static void box_contrast(int               row,
-			 JDIMENSION        output_width,
+static void box_contrast(Trow              row,
+			 Tcol		   output_width,
 			 int               output_components,
 			 int		   focus_channel,
 			 JSAMPARRAY        this_buffer,
 			 JSAMPARRAY        prev_buffer,
-			 int		   frame_height)
+			 Trow		   frame_height)
 {
-  int             col;
+  Tcol            col;
   int		  i;
   unsigned char * p;
   unsigned char * q;
@@ -215,12 +230,12 @@ static void box_contrast(int               row,
 	  fprintf(stderr, "col=%u, row=%u, interrow=%llu, intercol=%llu\n",  col, row, interrow_value, intercol_value);
 	}
 
-      /* we've got 2 numbers (inter column and inter row) contrast .... these may be in 2 box (a primary and an alternate) */
+      /* we've got 2 numbers (inter column and inter row) contrast .... these may be in 2 boxes (a primary and an alternate) */
 
       for (i=0; i<cursors; ++i)
 	{
-	  if (debug>2)
-	    fprintf(stderr, "box_contrast: nbox[%d] is at %p\n", i, &nbox[i]);
+	  if (debug>3)
+	    fprintf(stderr, "box_contrast: nbox[%d] (box %d) is at %p stat=%llu\n", i, nbox[i].box_no, &nbox[i], nbox[i].stat);
 	  
 	  update_box(&nbox[i], row, col, frame_height, interrow_value, intercol_value);   /* NB we move down and entire FRAME (not box height) */
 	}
@@ -247,23 +262,23 @@ static int read_jpeg_file(FILE * const infile)
 
 
   J_COLOR_SPACE out_color_space;       /* colorspace for output */
-  JDIMENSION    output_width;          /* scaled image width */
-  JDIMENSION    output_height;         /* scaled image height */
+  Tcol		output_width;          /* scaled image width */
+  Trow		output_height;         /* scaled image height */
   int           out_color_components;  /* # of color components in out_color_space */
   int           output_components;     /* # of color components returned */
 
-  int		row;
-  int	        row_stride;
+  Trow		row;
+  Trow	        row_stride;
 
   int		focus_channel;
 
-  int		frame_height;
-  int		frame_width;
-  int		half_height;
-  int		half_width;
+  Trow		frame_height;
+  Tcol		frame_width;
+  Trow		half_height;
+  Tcol		half_width;
 
-  int		box_height;
-  int		box_width;
+  Trow		box_height;
+  Tcol		box_width;
 
   int		i;
 
@@ -281,15 +296,15 @@ static int read_jpeg_file(FILE * const infile)
 
   /* mostly a documentation aid, to make it clear whch values we use from "cinfo" */
   out_color_space      = cinfo.out_color_space;       /* colorspace for output */
-  output_width         = cinfo.output_width;          /* scaled image width */
-  output_height        = cinfo.output_height;         /* scaled image height */
+  output_width         = (Tcol)cinfo.output_width;    /* scaled image width */
+  output_height        = (Trow)cinfo.output_height;   /* scaled image height */
   out_color_components = cinfo.out_color_components;  /* # of color components in out_color_space */
   output_components    = cinfo.output_components;     /* # of color components returned */
 
   focus_channel        = (out_color_components == 1) ? 0 : channel; /* greyscale only has index 0 */
 
-  frame_height           = output_height/vframes;	      /* size of full box  */
-  frame_width            = output_width/hframes;
+  frame_height         = output_height/(Trow)vframes;	    /* size of full box  */
+  frame_width          = output_width/(Tcol)hframes;
   half_height          = frame_height/2;                /* Offset of alternate boxes */
   half_width           = frame_width/2;
 
@@ -326,13 +341,13 @@ static int read_jpeg_file(FILE * const infile)
     {
       fprintf(stderr, "Image will be divided into %d horizontal frames by %d vertical frames (plus as many again alternate frames)\n",  hframes,      vframes);
       fprintf(stderr, "horizontal frames are %d pixels wide by %d high\n",       frame_width,  frame_height);
-      fprintf(stderr, "Each frame contains a single focus box of %d:%d high\n",  box_width,    box_height);
+      fprintf(stderr, "Each frame contains a single focus box of %d:%d\n",  box_width,    box_height);
       
     }
 
 
   
-  int column;
+  Tcol column;
   column = 0;
 
   /* primary boxes ... note we space out as FRAME, but box sizes are size of BOX*/
@@ -391,17 +406,17 @@ static int read_jpeg_file(FILE * const infile)
       fprintf(stderr, "Box Width        : %d\n", box_width);
     }
 
-  row_stride = cinfo.output_width * cinfo.output_components; /* in bytes */
+  row_stride = ((Trow)cinfo.output_width * (Trow)cinfo.output_components); /* in bytes */
 
   /* Use internal memory manager to give us a buffer ..sadly (and undocumented) it wants BYTES not components */
   buffer1 = (cinfo.mem->alloc_sarray) ((j_common_ptr) &cinfo,
 				       JPOOL_IMAGE,            /* just for this (jpeg) image */
-				       row_stride,	     /* Number of bytes (not samples) */
+				       (JDIMENSION)row_stride, /* Number of bytes (not samples) */
 				       1);
 
   buffer2 = (cinfo.mem->alloc_sarray) ((j_common_ptr) &cinfo,
 				       JPOOL_IMAGE,
-				       row_stride,
+				       (JDIMENSION)row_stride,
 				       1);
 
   /* read the 1st row (special case) outside of loop */
@@ -447,11 +462,14 @@ static int read_jpeg_file(FILE * const infile)
 static void usage(char prog[])
 {
   fprintf(stderr, "Usage: %s [-v|--verbose][-d|--debug][-r|--red|-b|--blue|-g|--green][-f <filelistname>|--file <filelistname>] <list of filenames>\n"
+	          "[-B <cols>:<rows>|--box <cols>:<rows>] [-H <hframes> | -hframes <hframes>] [-V <vframes> | -vframes <vframes>]\n"
+		  "\n"
                   "-v or --verbose produce more verbose output, can be repeated for more verbosity\n"
                   "-d or --debug produce debug output on stderr, can be repeated for more verbosity\n"
 	          "[-r|--red|-b|--blue|-g|--green] base the calculations on reg/green or blue channels, default is green, ignored for greyscale\n"
 		  "[-f <filelistname>|--file <filelistname>] filelistname is a file which contains a list of files, one per line. These are processed before <list of filenames>\n"
-		  "[-b <cols>:<rows>|--box <cols>:<rows>] [-H <hframes> | -hframes <hframes>] [-V <vframes> | -vframes <vframes>]\n"
+		  "<hframes> and <vframes> defines the number of frames and thus indirectly the number of frames\n"
+		  "[-B <cols>:<rows>|--box <cols>:<rows>] defines just the size of a focus box withing a frame (default is full frame szie) \n"
 		  "\n"
 		  "The Image is divided into <hframe> Horizontal frames by <vframe> Vertical frames\n"
 		  "A 2nd set of alternate frames is defined midways (horizontally & vertically) between frames\n"
@@ -489,6 +507,13 @@ static int process_1file(char * input_filename)
       dump_nbox(&best_box);
       fprintf(stderr, "\n");
     }
+
+  if (debug)
+    fprintf(stderr, "Final BESTBOX: %d: %d:%d-%d:%d  stat=%llu  ",
+	    best_box.box_no,
+	    best_box.box.first_column,  best_box.box.first_row,
+	    best_box.box.last_column,   best_box.box.last_row,
+	    best_box.stat );
   
   printf("%s %llu (%d:%d-%d:%d)\n",
 	 input_filename,	 

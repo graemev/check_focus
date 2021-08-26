@@ -15,6 +15,17 @@ extern int verbose;
 #define CF_TRUE  1
 #define CF_FALSE 0
 
+/* For debugging , Col = signed, Row = Unsigned ...then if we get the wrong way around -Wconversion will warn us
+ */
+
+typedef int Trow;
+typedef unsigned long Tcol;
+
+
+
+
+
+
 typedef unsigned long long Cf_stat;      /* Holds a very big unsigned number */
 typedef double             Cf_fudge;     /* A real number , a fudge factor   */
 
@@ -53,18 +64,10 @@ struct Cf_stats_NOT
 
 struct box
 {
-  int first_column;     /* We are "in the box iff: */
-  int first_row;        /* column >= first_column AND <= last_column         */
-  int last_column;	/* row >= first_row       AND <= last_row ... AND .. */
-  int last_row;     
-} ;
-
-struct box_not
-{
-  int first_row;        /* We are "in the box iff: */
-  int last_row;         /* row >= first_row       AND <= last_row ... AND .. */
-  int first_column;     /* column >= first_column AND <= last_column         */
-  int last_column;
+  Tcol first_column;     /* We are "in the box iff: */
+  Trow first_row;        /* column >= first_column AND <= last_column         */
+  Tcol last_column;	/* row >= first_row       AND <= last_row ... AND .. */
+  Trow last_row;     
 } ;
 
 /* Method signatures */
@@ -72,11 +75,11 @@ struct box_not
 extern Cf_stat adjust		(Cf_stat input, int shiftr, Cf_fudge fudge_factor);
 extern Cf_stat diff             (unsigned char one, unsigned char other );
 
-extern CF_BOOL inbox            (struct box *p, int column, int row);
+extern CF_BOOL inbox            (struct box *p, Tcol column, Trow row);
 extern CF_BOOL box_defined      (struct box *p);
 extern void    copy_box         (struct box *to, struct box *from);
 
 extern void    dump_3component  (unsigned char comp[]);
 extern void    dump_1component  (unsigned char comp[]);
-extern void    dump_1row        (int output_components, JSAMPARRAY buffer, JDIMENSION output_width);  
+extern void    dump_1row        (int output_components, JSAMPARRAY buffer, Tcol output_width);
 extern char   *colorspace_string(J_COLOR_SPACE space);

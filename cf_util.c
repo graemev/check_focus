@@ -35,7 +35,7 @@ Cf_stat adjust(Cf_stat input, int shiftr, Cf_fudge fudge_factor)
 }
 
 
-CF_BOOL inbox(struct box * p, int column, int row)
+CF_BOOL inbox(struct box * p, Tcol column, Trow row)
 {
   return ( row >= p->first_row && row <= p->last_row  &&  column >= p->first_column && column <= p->last_column);
 }
@@ -75,7 +75,7 @@ Cf_stat diff(unsigned char one, unsigned char other )
   int y = other;  /* we want signed arithmetic) */
   Cf_stat result;
 
-  result = ((x-y)*(x-y)); /* result will always be +ve, so we lose nothing ...doing unsigned subtraction would cause big numbers */
+  result = (Cf_stat)((x-y)*(x-y)); /* result will always be +ve, so we lose nothing ...doing unsigned subtraction would cause big numbers */
 
   return (result);
 }
@@ -174,7 +174,7 @@ void dump_1component(unsigned char comp[])
 }
 
 /* Note output width is in terms of components */
-void dump_1row(int output_components, JSAMPARRAY buffer, JDIMENSION output_width)
+void dump_1row(int output_components, JSAMPARRAY buffer, Tcol output_width)
 {
   // NB
   // typedef JSAMPLE *JSAMPROW;      /* ptr to one image row of pixel samples. */

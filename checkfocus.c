@@ -51,8 +51,8 @@ static char *current_filename;   /* used ONLY for error messages ... poor encaps
 
 
 /* If a function has more than six argumensts, you missed one */
-static void calculate_contrast(int               row,
-			       JDIMENSION        output_width,
+static void calculate_contrast(Trow              row,
+			       Tcol              output_width,
 			       int               output_components,
 			       int		 focus_channel,
 			       JSAMPARRAY        prev_buffer,
@@ -60,7 +60,7 @@ static void calculate_contrast(int               row,
 			       struct box      * this_box,
 			       struct Scores   * result)
 {
-  int             col;
+  Tcol            col;
   unsigned char * p;
   unsigned char * q;
 
@@ -87,6 +87,9 @@ static void calculate_contrast(int               row,
 	  result->centre_box.overall    += interrow_value + intercol_value;
 	  result->centre_box.horizontal += intercol_value;
 	  result->centre_box.vertical   += interrow_value;
+
+	  if (debug >2)
+	    fprintf(stderr, "col=%d,row=%d is (score=%llu) is inside box stat=%llu\n", col, row, interrow_value + intercol_value,result->centre_box.overall);
 	}
 
       if (p[focus_channel] >= overexposed_limit)
@@ -118,13 +121,13 @@ static int read_jpeg_file(FILE * const infile, struct Scores * result)
 
   
   J_COLOR_SPACE out_color_space;       /* colorspace for output */
-  JDIMENSION    output_width;          /* scaled image width */
-  JDIMENSION    output_height;         /* scaled image height */
+  Tcol		output_width;          /* scaled image width */
+  Trow		output_height;         /* scaled image height */
   int           out_color_components;  /* # of color components in out_color_space */
   int           output_components;     /* # of color components returned */
 
-  int		row;
-  int	        row_stride;
+  Trow		row;
+  Trow		row_stride;
 
   int		focus_channel;
 
@@ -157,8 +160,8 @@ static int read_jpeg_file(FILE * const infile, struct Scores * result)
 
   /* mostly a documentation aid, to make it clear whch values we use from "cinfo" */
   out_color_space      = cinfo.out_color_space;       /* colorspace for output */
-  output_width         = cinfo.output_width;          /* scaled image width */
-  output_height        = cinfo.output_height;         /* scaled image height */
+  output_width         = (Tcol)cinfo.output_width;          /* scaled image width */
+  output_height        = (Trow)cinfo.output_height;         /* scaled image height */
   out_color_components = cinfo.out_color_components;  /* # of color components in out_color_space */
   output_components    = cinfo.output_components;     /* # of color components returned */
 
@@ -168,13 +171,13 @@ static int read_jpeg_file(FILE * const infile, struct Scores * result)
     copy_box(&this_box, &box);
   else
     {
-      int box_half_width  = (output_width  * 5 / 100);  /* 5% */
-      int box_half_height = (output_height * 5 / 100);  /* 5% */
+      Tcol box_half_width  = (output_width  * 5 / 100);  /* 5% */
+      Trow box_half_height = (output_height * 5 / 100);  /* 5% */
 
-      int mid_row         = output_height/2;
-      int mid_column      = output_width/2;
+      Trow mid_row         = output_height/2;
+      Tcol mid_column      = output_width/2;
 
-      this_box.first_row     = mid_row - box_half_height;  /* so total box is 10% of image, in the centre */
+      this_box.first_row     = mid_row - box_half_height;  /* so total box is 25% of image, in the centre */
       this_box.last_row      = mid_row + box_half_height;
       this_box.first_column  = mid_column - box_half_width;
       this_box.last_column   = mid_column + box_half_width;
@@ -195,7 +198,7 @@ static int read_jpeg_file(FILE * const infile, struct Scores * result)
       fprintf(stderr, "Output Components       : %d (actual number per Pixel [1 iff indexed])\n", output_components);
     }
   
-  row_stride = cinfo.output_width * cinfo.output_components; /* in bytes */
+  row_stride = (Trow)cinfo.output_width * (Trow)cinfo.output_components; /* in bytes */
 
   if (fudge_rows)
     {
@@ -250,12 +253,12 @@ static int read_jpeg_file(FILE * const infile, struct Scores * result)
   /* Use internal memory manager to give us a buffer ..sadly (and undocumented) it wants BYTES not components */
   buffer1 = (cinfo.mem->alloc_sarray) ((j_common_ptr) &cinfo,
 				       JPOOL_IMAGE,            /* just for this (jpeg) image */
-				       row_stride,	     /* Number of bytes (not samples) */
+				       (JDIMENSION)row_stride, /* Number of bytes (not samples) */
 				       1);
 
   buffer2 = (cinfo.mem->alloc_sarray) ((j_common_ptr) &cinfo,
 				       JPOOL_IMAGE,         
-				       row_stride,	    
+				       (JDIMENSION)row_stride,	    
 				       1);
          
   /* read the 1st row (special case) outside of loop */
@@ -302,7 +305,8 @@ static void usage(char prog[])
   fprintf(stderr, "Usage: %s [-v|--verbose][-d|--debug][-r|--red|-b|--blue|-g|--green]\n"
 	          "[-B x:y-x:y|--box x:y-x:y][-f <filelistname>|--file <filelistname>] [-F[<rows:cols>] | --fudge=[<row:col>]\n"
 	          "[-o<0-255>] | --overexposed=<0-255> [-u<0-255>] | --underxposed=<0-255> <list of filenames>\n"
-	  
+		  "-s <bits>|--shift <bits>\n"
+		  "\n"
                   "-v or --verbose produce more verbose output, can be repeated for more verbosity\n"
                   "-d or --debug produce debug output on stderr, can be repeated for more verbosity\n"
 	          "[-r|--red|-b|--blue|-g|--green] base the calculations on reg/green or blue channels, default is green, ignored for greyscale\n"
@@ -445,7 +449,7 @@ int main(int argc, char **argv)
 	  if (x < 0 || x > 255)
 	      fprintf(stderr, "--overexposed must be in range 0-255, setting ignored");
 	  else
-	    overexposed_limit=x;
+	    overexposed_limit=(unsigned char)x;
 	  break;
 
 	case 'u':
@@ -453,7 +457,7 @@ int main(int argc, char **argv)
 	  if (x < 0 || x > 255)
 	      fprintf(stderr, "--underexposed must be in range 0-255, setting ignored");
 	  else
-	    underexposed_limit=x;
+	    underexposed_limit=(unsigned char)x;
 	  break;
 
 	default:
@@ -489,7 +493,8 @@ int main(int argc, char **argv)
 
   if (boxstring)
     {
-      int topx,topy,bottomx,bottomy;
+      Tcol topx,bottomx;
+      Trow topy,bottomy;
       
       if (sscanf(boxstring, "%d:%d-%d:%d", &topx, &topy, &bottomx, &bottomy ) !=4)
 	{
