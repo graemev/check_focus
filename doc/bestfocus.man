@@ -1,0 +1,170 @@
+.TH BESTFOCUS 1
+.SH NAME
+bestfocus \- finds the area of best focus in a jpeg image
+.SH SYNOPSIS
+.B bestfocus
+[\fB\-v\fR]
+[\fB\-\-verbose\fR]
+[\fB\-d\fR]
+[\fB\-\-debug\fR]
+[\fB\-r\fR]
+[\fB\-\-red\fR]
+[\fB\-b\fR]
+[\fB\-\-blue\fR]
+[\fB\-g\fR]
+[\fB\-\-green\fR]
+[\fB\-f\fR \fIfilelist\fR]
+[\fB\-\-file\fR \fIfilelist\fR]
+[\fB\-B\fR \fIx:y\fR]
+[\fB\-\-box\fR \fIx:y\fR]
+[\fB\-H\fR \fI<hframes>\fR
+[\fB\-\-hframes[\fR\fI<hframes>]\fR
+[\fB\-V\fR \fI<vframes>\fR
+[\fB\-\-fvframes[\fR\fI<vframes>]\fR
+.IR files ...
+.SH DESCRIPTION
+.B bestfocus
+Finds the area of best focus in a jpeg image. The output format is:
+.nf
+<filename>   <square> <box>
+.fi
+For example:
+.nf
+SIM-card.jpg 28457736 (1715:208-2057:415)
+.fi
+The <square> score can be compared with the <square> score in \fBcheckfocus(1)\fR
+.SH OPTIONS
+.Tp
+.BR \-v ", " \-\-verbose\fR
+Enables verbose mode. It can be repeated to make output more verbose.
+.Tp
+.BR \-d ", " \-\-debug\fR
+Enables debug mode. It can be repeated to make output more verbose.
+.Tp
+.BR \-r ", " \-\-red ", " \-b ", " \-\-blue ", " \-g ", " \-\-green\fR
+Choose the channel to use for analysis, ignored for greyscale images, defaults to green
+.Tp
+.BR \-B \fI\ <X:Y>\ \fR ", " \-\-box \fI\ <X:Y>\ \fR
+Defines the size (only, not location) of the BESTBOX. One of these is checked in each FRAME (see hframe/vframe) this what is checked for good focus
+.Tp
+.BR \-H \fI\ <hframes>\ \fR ", " \-\-hframes \fI\ <hframes>\ \fR
+Defines how many frames per row
+.Tp
+.BR \-V \fI\ <vframes>\ \fR ", " \-\-vframes \fI\ <vframes>\ \fR
+Defines how many frames per column. hframes and vframes together define how many frames exist over the whole image. e.g 10x10 would define 10x10x2 = 200 frames
+each frame would host a single focus box. So, for example given a 3000x2000 image, with hframe=30 vframe=20 would define 1200 frames of 100x100. If the focusbox
+was then set to 20:20 you would get 1200 boxes of 20:20, relatively sparse. If instead hframes=150 vframe=100 you would get 30,000 frames if no (focus)box were
+then defined we would also get 30,000 focus boxes of 20x20. The sparse version runs quicker but might miss a "good bit".
+.Tp
+.BR \-f \fI\ FILELISTNAME\ \fR ", " \-\-file \fI\ FILELISTNAME\ \fR
+Where \fBfilelistname\fR is a file which contains a list of filenames (one per line) to be process, before files on command line (if any)
+
+.SH EXAMPLES
+Simple usage
+.BR bestfocus
+command:
+.PP
+.nf
+.RS
+$ bestfocus -v -V 100 -H 100 birthday.jpg 
+Package check_focus[0.3] bestfocus - find best area of focus
+Processing file: birthday.jpg
+Image will be divided into 100 horizontal frames by 100 vertical frames (plus as many again alternate frames)
+horizontal frames are 46 pixels wide by 20 high
+Each frame contains a single focus box of 46:20
+Colour Space     : JCS_RGB
+Output Width     : 4624
+Output Height    : 2080
+Output Colour Components: 3 Number of components in colour Space)
+Output Components       : 3 (actual number per Pixel [1 iff indexed])
+Vertical Frames  : 100
+Horizontal Frames: 100
+Frame Height     : 20
+Frame Width      : 46
+Box Height       : 20
+Box Width        : 46
+New BESTBOX found: box001: Stat=11489 (0:0-45:19)
+New BESTBOX found: box002: Stat=11523 (46:0-91:19)
+New BESTBOX found: box003: Stat=16935 (92:0-137:19)
+New BESTBOX found: box006: Stat=47370 (230:0-275:19)
+New BESTBOX found: box007: Stat=52780 (276:0-321:19)
+New BESTBOX found: box008: Stat=87720 (322:0-367:19)
+New BESTBOX found: box108: Stat=144235 (345:10-390:29)
+New BESTBOX found: box309: Stat=164055 (368:60-413:79)
+New BESTBOX found: box408: Stat=169111 (345:70-390:89)
+New BESTBOX found: box970: Stat=182243 (3174:180-3219:199)
+New BESTBOX found: box1070: Stat=203072 (3174:200-3219:219)
+New BESTBOX found: box1169: Stat=241180 (3151:210-3196:229)
+New BESTBOX found: box1257: Stat=262878 (2576:240-2621:259)
+New BESTBOX found: box1355: Stat=375234 (2507:250-2552:269)
+New BESTBOX found: box1356: Stat=703901 (2553:250-2598:269)
+New BESTBOX found: box1356: Stat=1639727 (2530:260-2575:279)
+Final BESTBOX: box1356: Stat=1639727 (2530:260-2575:279)
+birthday.jpg 1639727 (2530:260-2575:279)
+Processing took 5 seconds
+.RE
+.fi
+.PP
+You may want to do a run like this before doing a batch. The focus box defined is only 46 by 20 pixels. If we want to compare
+a group of images they would need to have the same size focus box (so they can be compared) but we see it took 5 seconds to
+process a single image. Maybe we want to do a rethink. If, for example this was one of a batch of 1000 images taken out a group
+of wildlife with a long lens, using a "shoot first focus later" approach, with a small bird somewhere in those 1000 images, we may
+need to let the computer churn around for 1000x5 seconds = 1hr 24 mins
+
+Common usage
+.BR bestfocus
+command:
+.PP
+.nf
+.RS
+$ bestfocus drone-*.jpg | sort -nr -k2
+drone-focused-multibox.jpg 36290490 (448:108-575:179)
+drone-sharp.jpg 34873302 (448:108-575:179)
+drone-focused.jpg 34763448 (448:108-575:179)
+drone-blured-multibox.jpg 2910870 (448:108-575:179)
+drone-blured.jpg 1933600 (448:108-575:179)
+
+$ checkfocus -B 448:108-575:179 drone-*.jpg | sort -nr -k5
+drone-focused-multibox.jpg 71154721 27858576 43296145 36290490 16257002 20033488 0 2
+drone-sharp.jpg 320541267 74258203 246283064 34873302 15642598 19230704 0 5
+drone-focused.jpg 66158661 25155372 41003289 34763448 15588858 19174590 0 2
+drone-blured-multibox.jpg 25143735 6378578 18765157 2910870 1440665 1470205 0 2
+drone-blured.jpg 22357791 4864803 17492988 1933600 964673 968927 0 2
+.RE
+.fi
+.PP
+Here we have a number of versions of an image, sorted by the score for the BESTBOX.
+As it turns out the BESTBOX is the same in each image, so we can achieve the same effect
+using the much faster checkbox(1). If the images had been independent the BESTBOX would have been
+different and we couldn't take this shortcut. 
+.PP
+Workflow orientated
+.BR bestfocus
+command:
+.PP
+.nf
+.RS
+$ find ~/Pictures/2021/ -newer ~/Pictures/2021/20210701/IMG_20210701_112859.jpg -name '*.jpg'  > recent-files
+$ wc recent-files 
+  405   419 22824 recent-files
+$ date && bestfocus -f recent-files > scores && date
+Tue 24 Aug 21:55:00 BST 2021
+Tue 24 Aug 22:03:44 BST 2021
+$ sort -nr -k2 scores  > sorted-scores
+.RE
+.fi
+.PP
+Here we generated a list of files using find(1), we got 405 files. Running bestfocus(1)
+with the default settings (10x10 frames) it took almost 9 minutes to generate
+these scores. We then sort these by the score of whichever bestbox is found, if
+is different for each image.
+.nf
+$ exiftool -ImageHeight  -ImageWidth  "IMG_20210522_112146 - IMG_20210522_112226.tif-hugin.jpg"
+Image Height                    : 4133
+Image Width                     : 9647
+.fi
+The worst focus was a 40MP panorama (produced with Hugin). It looks pretty sharp
+but that is because I'm not seeing it at 100%. Also the Panorama used a focus
+box of 963:412, whereas the best image used a focusbox of 461:207. These are all
+factors that need to be borne in mind.  Realistically you should only compare like
+(sized) images.

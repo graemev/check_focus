@@ -1,0 +1,133 @@
+.TH CHECKFOCUS 1
+.SH NAME
+checkfocus \- prints stats on the quality of focus of a jpeg image
+.SH SYNOPSIS
+.B checkfocus
+
+[\fB\-v\fR]
+[\fB\-\-verbose\fR]
+[\fB\-d\fR]
+[\fB\-\-debug\fR]
+[\fB\-r\fR]
+[\fB\-\-red\fR]
+[\fB\-b\fR]
+[\fB\-\-blue\fR]
+[\fB\-g\fR]
+[\fB\-\-green\fR]
+[\fB\-B\fR \fIx:y-x:y\fR]
+[\fB\-\-box\fR \fIx:y-x:y\fR]
+[\fB\-f\fR \fIfilelist\fR]
+[\fB\-\-file\fR \fIfilelist\fR]
+[\fB\-s\fR \fIBITS\fR]
+[\fB\-\-shift\fR \fIBITS\fR]
+[\fB\-F\fR\fI[<rows:cols>]\fR note no space
+[\fB\-\-fudge[=\fR\fI<rows:cols>]\fR note equal sign
+[\fB\-o\fR \fI<0-255>\fR]
+[\fB\-\-overexposed\fR \fI<0-255>\fR]
+[\fB\-u\fR \fI<0-255>\fR]
+[\fB\-\-underexposed\fR \fI<0-255>\fR]
+.IR files ...
+.SH DESCRIPTION
+.B checkfocus
+prints stats on the quality of focus (and exposure) of a jpeg image. The intended usage
+is to process batches of digital photographs. The output format is:
+.nf
+
+<filename>   <overall> <hoverall> <voverall>  <square> <hsquare> <vsquare> <over%> <under%>
+
+.fi
+For example:
+.nf
+
+SIM-card.jpg 835167104 367049596 468117508 164615 77936 86679 39 3
+
+.fi
+.SH OPTIONS
+.Tp
+.BR \-v ", " \-\-verbose\fR
+Enables verbose mode. It can be repeated to make output more verbose.
+.PP
+.PP
+.Tp
+.BR \-d ", " \-\-debug\fR
+Enables debug mode. It can be repeated to make output more verbose.
+.PP
+.Tp
+.BR \-r ", " \-\-red ", " \-b ", " \-\-blue ", " \-g ", " \-\-green\fR
+Choose the channel to use for analysis, ignored for greyscale images, defaults to green.
+.PP
+.Tp
+.BR \-B \fI\ <X:Y-X:Y>\ \fR ", " \-\-box \fI\ <X:Y-X:Y>\ \fR
+Defines the centrebox (top left corner to bottom right) defaults to a box half the width & height of full image in the centre.
+.PP
+.Tp
+.BR \-f \fI\ FILELISTNAME\ \fR ", " \-\-file \fI\ FILELISTNAME\ \fR
+Where \fBfilelistname\fR is a file which contains a list of filenames (one per line) to be process, before files on command line (if any).
+.PP
+.Tp
+.BR \-s \fI\ bits\ \fR ", " \-\-shift \fI\ BITS\ \fR
+Shift the score right by that number of bits, e.g. -s 8 causes all scores to be divided by 256 (2^8).
+.PP
+.Tp
+.BR \-F \fI[ROWS:COLS]\fR ", " \-\-fudge\fI[=ROWS:COLS]\ \fR
+Fudge the score for whole image (only, not centre) to match that of a bigger image, default is 12000:8000
+iff \-f or \-\-fudge is selected but no value given. Note syntax has no spaces and longform requires an equals sign.
+.PP
+.Tp
+.BR \-o \fI<0-255>\fR ", " \-\-overexposed\fI<0-255>\ \fR
+Defines what is considered overexposed. Defaults to 230, for cartoon/graphic 255 might be a more sensible choice.
+The final figure of %over is the percentage of pixels whos channel value equals or exceeds this.
+.PP
+.Tp
+.BR \-u \fI<0-255>\fR ", " \-\-underexposed\fI<0-255>\ \fR
+Defines what is considered underexposed. Defaults to 25, for cartoon/graphic 0 might be a more sensible choice.
+The final figure of %under is the percentage of pixels whos channel value is less than or equal to this value.
+.SH EXAMPLES
+Simple usage
+.BR checkfocus
+command:
+.PP
+.nf
+.RS
+$ checkfocus SIM-card.jpg 
+SIM-card.jpg 835167104 367049596 468117508 164615 77936 86679 39 3
+.RE
+.fi
+.PP
+This is just the values for a single image, we can see 39% of the pixels are overexposed (3% under)
+the other numbers only have meaning when comparing two or more images.
+
+Common usage
+.BR checkfocus
+command:
+.PP
+.nf
+.RS
+$ checkfocus drone-*.jpg | sort -nr -k2
+drone-sharp.jpg 320541267 74258203 246283064 15762279 3723471 12038808 0 5
+drone-focused-multibox.jpg 71154721 27858576 43296145 362085 83566 278519 0 2
+drone-focused.jpg 66158661 25155372 41003289 362085 83566 278519 0 2
+drone-blured-multibox.jpg 25143735 6378578 18765157 979523 226943 752580 0 2
+drone-blured.jpg 22357791 4864803 17492988 979585 226930 752655 0 2
+.RE
+.fi
+.PP
+Here we have a number of versions of an image, sorted by the score for the
+overall image. The sharpest is \fBdrone-sharp.jpg\fR, the fuzziest is \fBdrone-blured.jpg\fR.
+.PP
+Workflow orientated
+.BR checkfocus
+command:
+.PP
+.nf
+.RS
+$ find ~/Pictures/2021/ -newer ~/Pictures/2021/20210701/IMG_20210701_112859.jpg -name '*.jpg'  > recent-files
+$ wc recent-files 
+  316   318 17682 recent-files
+$ checkfocus -f recent-files -F > scores
+$ sort -nr -k3 scores  > sorted-scores
+.RE
+.fi
+.PP
+Here we generated a list of files using find(1), we got 316 files. We ran checkfocus with the (default) fudgebox
+as these images are wildly differing sizes, then we sorted by just the horizontal (fudge overall) score.
