@@ -43,3 +43,57 @@ Writing objects: 100% (3/3), 659 bytes | 659.00 KiB/s, done.
 Total 3 (delta 1), reused 0 (delta 0)
 To git://zbox.home/check_focus
    5fd4692..0688714  master -> master
+
+
+------------------ Github setup ------------------------
+
+Not at all as documented:
+
+
+
+   32  git remote -v
+   33  git remote add check_focus https://github.com/graemev/check_focus
+
+   34  git remote -v
+   35  git remote add origin https://github.com/graemev/check_focus
+   36  git remote remove origin 
+
+   37  git remote -v
+   38  git remote add origin https://github.com/graemev/check_focus
+
+   39  git remote -v
+   40  git remote remove check_focus
+
+   41  git remote -v
+   42  git push                               error .... need to set .....
+   43  git push --set-upstream origin master  error 
+
+git@zbox:/net/nas/git/check_focus.git$ git push --set-upstream origin master
+Username for 'https://github.com': graemev
+Password for 'https://graemev@github.com': 
+remote: Support for password authentication was removed on August 13, 2021. Please use a personal access token instead.
+remote: Please see https://github.blog/2020-12-15-token-authentication-requirements-for-git-operations/ for more information.
+fatal: Authentication failed for 'https://github.com/graemev/check_focus/'
+
+...lots of messing around publisihng my public key (worked fine) but all the SSH forwarding was disabled on real...so reenabled
+then discovered needed a differnt URL.
+
+
+git@zbox:/net/nas/git/check_focus.git$ git remote -v
+origin	git@github.com:graemev/check_focus.git (fetch)
+origin	git@github.com:graemev/check_focus.git (push)
+git@zbox:/net/nas/git/check_focus.git$ git push --set-upstream origin master
+X11 forwarding request failed on channel 0
+Counting objects: 84, done.
+Delta compression using up to 4 threads.
+Compressing objects: 100% (83/83), done.
+Writing objects: 100% (84/84), 39.15 MiB | 988.00 KiB/s, done.
+Total 84 (delta 49), reused 0 (delta 0)
+remote: Resolving deltas: 100% (49/49), done.
+remote: 
+remote: Create a pull request for 'master' on GitHub by visiting:
+remote:      https://github.com/graemev/check_focus/pull/new/master
+remote: 
+To github.com:graemev/check_focus.git
+ * [new branch]      master -> master
+Branch master set up to track remote branch master from origin.
