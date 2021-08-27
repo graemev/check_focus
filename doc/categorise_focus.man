@@ -1,0 +1,100 @@
+.TH CATEGORISE_FOCUS 1
+.SH NAME
+CATEGORISE_FOCUS \- Utility script to arrange images into directories
+.SH SYNOPSIS
+.B CATEGORISE_FOCUS
+[\fB\-v\fR]
+[\fB\-\-verbose\fR]
+[\fB\-d\fR]
+[\fB\-k\fR \fIkey\fR]
+[\fB\-\-fkey\fR \fIkey\fR]
+[\fB\-r\fR]
+[\fB\-\-rename\fR]
+best [worst]
+.IR files ...
+.SH DESCRIPTION
+.B CATEGORISE_FOCUS
+A utility script which groups images into BEST , WORST and the remainder.
+You can do this based on the output of \fBcheckfocus\fR or \fBbestfocus\fR, and on any the data including exposure.
+You can recuse down into these directories and repeat the exercise with different settings, e.g. exposure within
+focus (or vice versa) or centre focus within overall focus.
+.SH OPTIONS
+.Tp
+.BR \-v ", " \-\-verbose\fR
+Enables verbose mode. It can be repeated to make output more verbose.
+.PP
+
+.Tp
+.BR \-k \fI\ KEY\ \fR ", "
+.BR \-\-key \fI\ KEY\ \fR
+KEY is a column number in the scorefile. It must be 2 or greater (as column 1 is the filename) default is 2, which is overall score from \fBcheckfocus\fR
+and the box score in \fBbestfocus\fR
+.PP
+
+.Tp
+.BR \-r ", " \-\-rename\fR
+Causes the moved files to be renamed to add a prefix of the chosen score (from key) so IMG123.jpg might get called BEST/13045670-IMG123.jpg
+
+.SH EXAMPLES
+With
+.BR CHECKFOCUS
+command:
+.PP
+.nf
+.RS
+
+$ find . -mtime -1       > filelist
+$ checkfocus -f filelist > scorefile
+$ categorise_focus 7300000 100000 < scorefile > command-file
+$ ...possibly edit the command-file...
+$ bash ./command-file
+
+.RE
+.fi
+.PP
+This simply moves the images into BEST & WORST directories (or leaves them in-place)
+
+With 
+.BR BESTFOCUS
+command:
+.PP
+.nf
+.RS
+
+$ find . -mtime -1                        > filelist
+$ bestfocus   -f filelist                 > scorefile
+$ categorise_focus -r 7300000 < scorefile > command-file
+$ ...possibly edit the command-file...
+$ bash ./command-file
+
+.RE
+.fi
+.PP
+Here we use \fBbestfocus\fR, only select for BEST (no WORST directory will be created)
+files moved into BEST will be prefixed with their BESTBOX score
+.PP
+.BR "Workflow orientated"
+command:
+.PP
+.nf
+.RS
+$ find . -mtime -1                        > filelist
+$ checkfocus -u 0 -o 255  -f filelist     > scorefile
+$ categorise_focus -k8 95     < scorefile > command-file
+	...the directory called BEST will hold images with >95% overexposed pixels
+$ categorise_focus -k9 95     < scorefile >> command-file   # Note the >>
+	...add to BEST images with >95% underexposed pixels
+$ bash ./command-file  # Do the moves
+$ mv BEST BAD-EXPOSURE # so called BEST is just biggest (over & under exposure scores)
+$ categorise_focus 1900000000 1000000000  < scorefile > command-file
+$ bash ./command-file  # move the good & bad focus (the poor exposure have already been removed)
+.RE
+.fi
+.PP
+Here we did multiple passes. First we moved the over and under exposed images out, then we split
+the remaining files into BEST & WORST (and remainder)
+.PP
+The command categorise_focus just emits shell commands. Once you run these
+commands you are moving files around a renaming them. In general do this with
+copies of you files (or hardlinks) to avoid the risk of losing a files due to
+an injudicious rename.

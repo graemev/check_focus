@@ -24,8 +24,8 @@ usage() {
 	normally you would redirect the output into a file. Edit it if required, then execute it:
 
 	find . -mtime -1       > filelist
-	checkfocus -f filelist > scorefile
-	${PROG} < scorefile > command-file
+	checkfocus  -f filelist > scorefile
+	${PROG} 7300000 100000 < scorefile > command-file
 	...possibly edit the command-file...
 	bash ./command-file
 EOF
