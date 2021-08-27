@@ -41,7 +41,7 @@ extern int verbose;
  */
 
 typedef int Trow;
-typedef unsigned long Tcol;
+typedef int Tcol;
 
 
 

@@ -249,7 +249,7 @@ static void box_contrast(Trow              row,
 
       if (debug > 2)
 	{
-	  fprintf(stderr, "col=%u, row=%u, interrow=%llu, intercol=%llu\n",  col, row, interrow_value, intercol_value);
+	  fprintf(stderr, "col=%d, row=%d, interrow=%llu, intercol=%llu\n",  col, row, interrow_value, intercol_value);
 	}
 
       /* we've got 2 numbers (inter column and inter row) contrast .... these may be in 2 boxes (a primary and an alternate) */

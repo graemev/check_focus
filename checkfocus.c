@@ -92,7 +92,7 @@ static void calculate_contrast(Trow              row,
 
       if (debug > 2)
 	{
-	  fprintf(stderr, "col=%u, row=%u, interrow=%llu, intercol=%llu\n",  col, row, interrow_value, intercol_value);
+	  fprintf(stderr, "col=%d, row=%d, interrow=%llu, intercol=%llu\n",  col, row, interrow_value, intercol_value);
 	}
 
       
