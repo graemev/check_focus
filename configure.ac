@@ -1,9 +1,11 @@
 #AC_PREREQ(??? do we have one???)
 AC_INIT([check_focus],[0.3])
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile])
 # Check for (the exsistance of) various programs
 AC_PROG_CC
 AC_PROG_INSTALL
+AC_PROG_RANLIB
 # Check for (the exsistance of) methods in library
 AC_SEARCH_LIBS([jpeg_std_error], [jpeg])
 AC_SEARCH_LIBS([sqrt], [m])
@@ -18,6 +20,7 @@ AC_CHECK_DECLS([JCS_EXT_RGB],[],[],[AC_INCLUDES_DEFAULT
 #endif
 ]])
 
-#
+# Set $(LIBOBJS) for Automake
+AC_LIBOBJ([cf_util])
 AM_INIT_AUTOMAKE
 AC_OUTPUT

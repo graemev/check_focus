@@ -97,21 +97,20 @@ DIST_COMMON = $(srcdir)/Makefile.am $(top_srcdir)/configure \
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
+CONFIG_HEADER = config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)" \
 	"$(DESTDIR)$(manmdir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_bestfocus_OBJECTS = bestfocus-bestfocus.$(OBJEXT) \
-	bestfocus-cf_util.$(OBJEXT)
+am_bestfocus_OBJECTS = bestfocus-bestfocus.$(OBJEXT)
 bestfocus_OBJECTS = $(am_bestfocus_OBJECTS)
-bestfocus_LDADD = $(LDADD)
+bestfocus_DEPENDENCIES = $(LIBOBJS)
 bestfocus_LINK = $(CCLD) $(bestfocus_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am_checkfocus_OBJECTS = checkfocus-checkfocus.$(OBJEXT) \
-	checkfocus-cf_util.$(OBJEXT)
+am_checkfocus_OBJECTS = checkfocus-checkfocus.$(OBJEXT)
 checkfocus_OBJECTS = $(am_checkfocus_OBJECTS)
-checkfocus_LDADD = $(LDADD)
+checkfocus_DEPENDENCIES = $(LIBOBJS)
 checkfocus_LINK = $(CCLD) $(checkfocus_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
@@ -129,9 +128,8 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/bestfocus-bestfocus.Po \
-	./$(DEPDIR)/bestfocus-cf_util.Po \
-	./$(DEPDIR)/checkfocus-cf_util.Po \
+am__depfiles_remade = $(DEPDIR)/cf_util.Po \
+	./$(DEPDIR)/bestfocus-bestfocus.Po \
 	./$(DEPDIR)/checkfocus-checkfocus.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -188,7 +186,8 @@ man1dir = $(mandir)/man1
 manmdir = $(mandir)/manm
 NROFF = nroff
 MANS = $(dist_man_MANS) $(man1_MANS)
-am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
+am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) \
+	$(LISP)config.h.in
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
 # *not* preserved.
@@ -209,9 +208,9 @@ ETAGS = etags
 CTAGS = ctags
 CSCOPE = cscope
 AM_RECURSIVE_TARGETS = cscope
-am__DIST_COMMON = $(dist_man_MANS) $(srcdir)/Makefile.in AUTHORS \
-	COPYING ChangeLog INSTALL NEWS README compile depcomp \
-	install-sh missing
+am__DIST_COMMON = $(dist_man_MANS) $(srcdir)/Makefile.in \
+	$(srcdir)/config.h.in AUTHORS COPYING ChangeLog INSTALL NEWS \
+	README cf_util.c compile depcomp install-sh missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -270,6 +269,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -317,13 +317,16 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-checkfocus_SOURCES = checkfocus.c cf_util.c
-bestfocus_SOURCES = bestfocus.c  cf_util.c
+checkfocus_SOURCES = checkfocus.c
+bestfocus_SOURCES = bestfocus.c
+checkfocus_LDADD = $(LIBOBJS)
+bestfocus_LDADD = $(LIBOBJS)
 man1_MANS = doc/checkfocus.man doc/bestfocus.man 
 dist_man_MANS = doc/checkfocus.man doc/bestfocus.man
 bestfocus_CFLAGS = -Wconversion -Wformat
 checkfocus_CFLAGS = -Wconversion -Wformat
-all: all-am
+all: config.h
+	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
 .SUFFIXES: .c .o .obj
@@ -360,6 +363,21 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	$(am__cd) $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
 $(am__aclocal_m4_deps):
+
+config.h: stamp-h1
+	@test -f $@ || rm -f stamp-h1
+	@test -f $@ || $(MAKE) $(AM_MAKEFLAGS) stamp-h1
+
+stamp-h1: $(srcdir)/config.h.in $(top_builddir)/config.status
+	@rm -f stamp-h1
+	cd $(top_builddir) && $(SHELL) ./config.status config.h
+$(srcdir)/config.h.in:  $(am__configure_deps) 
+	($(am__cd) $(top_srcdir) && $(AUTOHEADER))
+	rm -f stamp-h1
+	touch $@
+
+distclean-hdr:
+	-rm -f config.h stamp-h1
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \
@@ -417,9 +435,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@$(DEPDIR)/cf_util.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bestfocus-bestfocus.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bestfocus-cf_util.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/checkfocus-cf_util.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/checkfocus-checkfocus.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -456,20 +473,6 @@ bestfocus-bestfocus.obj: bestfocus.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(bestfocus_CFLAGS) $(CFLAGS) -c -o bestfocus-bestfocus.obj `if test -f 'bestfocus.c'; then $(CYGPATH_W) 'bestfocus.c'; else $(CYGPATH_W) '$(srcdir)/bestfocus.c'; fi`
 
-bestfocus-cf_util.o: cf_util.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(bestfocus_CFLAGS) $(CFLAGS) -MT bestfocus-cf_util.o -MD -MP -MF $(DEPDIR)/bestfocus-cf_util.Tpo -c -o bestfocus-cf_util.o `test -f 'cf_util.c' || echo '$(srcdir)/'`cf_util.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/bestfocus-cf_util.Tpo $(DEPDIR)/bestfocus-cf_util.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cf_util.c' object='bestfocus-cf_util.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(bestfocus_CFLAGS) $(CFLAGS) -c -o bestfocus-cf_util.o `test -f 'cf_util.c' || echo '$(srcdir)/'`cf_util.c
-
-bestfocus-cf_util.obj: cf_util.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(bestfocus_CFLAGS) $(CFLAGS) -MT bestfocus-cf_util.obj -MD -MP -MF $(DEPDIR)/bestfocus-cf_util.Tpo -c -o bestfocus-cf_util.obj `if test -f 'cf_util.c'; then $(CYGPATH_W) 'cf_util.c'; else $(CYGPATH_W) '$(srcdir)/cf_util.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/bestfocus-cf_util.Tpo $(DEPDIR)/bestfocus-cf_util.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cf_util.c' object='bestfocus-cf_util.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(bestfocus_CFLAGS) $(CFLAGS) -c -o bestfocus-cf_util.obj `if test -f 'cf_util.c'; then $(CYGPATH_W) 'cf_util.c'; else $(CYGPATH_W) '$(srcdir)/cf_util.c'; fi`
-
 checkfocus-checkfocus.o: checkfocus.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(checkfocus_CFLAGS) $(CFLAGS) -MT checkfocus-checkfocus.o -MD -MP -MF $(DEPDIR)/checkfocus-checkfocus.Tpo -c -o checkfocus-checkfocus.o `test -f 'checkfocus.c' || echo '$(srcdir)/'`checkfocus.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/checkfocus-checkfocus.Tpo $(DEPDIR)/checkfocus-checkfocus.Po
@@ -483,20 +486,6 @@ checkfocus-checkfocus.obj: checkfocus.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='checkfocus.c' object='checkfocus-checkfocus.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(checkfocus_CFLAGS) $(CFLAGS) -c -o checkfocus-checkfocus.obj `if test -f 'checkfocus.c'; then $(CYGPATH_W) 'checkfocus.c'; else $(CYGPATH_W) '$(srcdir)/checkfocus.c'; fi`
-
-checkfocus-cf_util.o: cf_util.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(checkfocus_CFLAGS) $(CFLAGS) -MT checkfocus-cf_util.o -MD -MP -MF $(DEPDIR)/checkfocus-cf_util.Tpo -c -o checkfocus-cf_util.o `test -f 'cf_util.c' || echo '$(srcdir)/'`cf_util.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/checkfocus-cf_util.Tpo $(DEPDIR)/checkfocus-cf_util.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cf_util.c' object='checkfocus-cf_util.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(checkfocus_CFLAGS) $(CFLAGS) -c -o checkfocus-cf_util.o `test -f 'cf_util.c' || echo '$(srcdir)/'`cf_util.c
-
-checkfocus-cf_util.obj: cf_util.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(checkfocus_CFLAGS) $(CFLAGS) -MT checkfocus-cf_util.obj -MD -MP -MF $(DEPDIR)/checkfocus-cf_util.Tpo -c -o checkfocus-cf_util.obj `if test -f 'cf_util.c'; then $(CYGPATH_W) 'cf_util.c'; else $(CYGPATH_W) '$(srcdir)/cf_util.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/checkfocus-cf_util.Tpo $(DEPDIR)/checkfocus-cf_util.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cf_util.c' object='checkfocus-cf_util.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(checkfocus_CFLAGS) $(CFLAGS) -c -o checkfocus-cf_util.obj `if test -f 'cf_util.c'; then $(CYGPATH_W) 'cf_util.c'; else $(CYGPATH_W) '$(srcdir)/cf_util.c'; fi`
 install-man1: $(dist_man_MANS) $(man1_MANS)
 	@$(NORMAL_INSTALL)
 	@list1='$(man1_MANS)'; \
@@ -811,7 +800,7 @@ distcleancheck: distclean
 	       exit 1; } >&2
 check-am: all-am
 check: check-am
-all-am: Makefile $(PROGRAMS) $(MANS)
+all-am: Makefile $(PROGRAMS) $(MANS) config.h
 installdirs:
 	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)" "$(DESTDIR)$(manmdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
@@ -852,13 +841,12 @@ clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-		-rm -f ./$(DEPDIR)/bestfocus-bestfocus.Po
-	-rm -f ./$(DEPDIR)/bestfocus-cf_util.Po
-	-rm -f ./$(DEPDIR)/checkfocus-cf_util.Po
+		-rm -f $(DEPDIR)/cf_util.Po
+	-rm -f ./$(DEPDIR)/bestfocus-bestfocus.Po
 	-rm -f ./$(DEPDIR)/checkfocus-checkfocus.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
-	distclean-tags
+	distclean-hdr distclean-tags
 
 dvi: dvi-am
 
@@ -903,9 +891,8 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-		-rm -f ./$(DEPDIR)/bestfocus-bestfocus.Po
-	-rm -f ./$(DEPDIR)/bestfocus-cf_util.Po
-	-rm -f ./$(DEPDIR)/checkfocus-cf_util.Po
+		-rm -f $(DEPDIR)/cf_util.Po
+	-rm -f ./$(DEPDIR)/bestfocus-bestfocus.Po
 	-rm -f ./$(DEPDIR)/checkfocus-checkfocus.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
@@ -926,25 +913,25 @@ uninstall-am: uninstall-binPROGRAMS uninstall-man
 
 uninstall-man: uninstall-man1 uninstall-manm
 
-.MAKE: install-am install-strip
+.MAKE: all install-am install-strip
 
 .PHONY: CTAGS GTAGS TAGS all all-am am--depfiles am--refresh check \
 	check-am clean clean-binPROGRAMS clean-cscope clean-generic \
 	cscope cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
 	dist-gzip dist-lzip dist-shar dist-tarZ dist-xz dist-zip \
 	distcheck distclean distclean-compile distclean-generic \
-	distclean-tags distcleancheck distdir distuninstallcheck dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-binPROGRAMS install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am install-man \
-	install-man1 install-manm install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
-	uninstall-am uninstall-binPROGRAMS uninstall-man \
-	uninstall-man1 uninstall-manm
+	distclean-hdr distclean-tags distcleancheck distdir \
+	distuninstallcheck dvi dvi-am html html-am info info-am \
+	install install-am install-binPROGRAMS install-data \
+	install-data-am install-dvi install-dvi-am install-exec \
+	install-exec-am install-html install-html-am install-info \
+	install-info-am install-man install-man1 install-manm \
+	install-pdf install-pdf-am install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic pdf pdf-am ps ps-am \
+	tags tags-am uninstall uninstall-am uninstall-binPROGRAMS \
+	uninstall-man uninstall-man1 uninstall-manm
 
 .PRECIOUS: Makefile
 

@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include "checkfocus.h"
 
 int debug=0;

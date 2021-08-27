@@ -10,3 +10,7 @@ config.status
 checkfocus
 bestfocus
 BUGS
+JUNK
+config.h.in
+Makefile.in
+*.a
