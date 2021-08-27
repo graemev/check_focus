@@ -12,3 +12,5 @@ BUGS
 JUNK
 Makefile.in
 *.a
+config.h
+stamp-h1
