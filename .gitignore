@@ -3,7 +3,6 @@
 Makefile
 aclocal.m4
 autom4te.cache
-compile
 config.log
 config.status
 *~
@@ -11,6 +10,5 @@ checkfocus
 bestfocus
 BUGS
 JUNK
-config.h.in
 Makefile.in
 *.a
