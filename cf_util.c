@@ -110,7 +110,8 @@ char *colorspace_string(J_COLOR_SPACE space)
     case (JCS_YCCK):
       name="JCS_YCCK"; /* Y/Cb/Cr/K */
       break;
-	      
+      
+#if defined(HAVE_DECL_JCS_EXT_RGB) && (HAVE_DECL_JCS_EXT_RGB==1)
     case (JCS_EXT_RGB):
       name="JCS_EXT_RGB"; /* red/green/blue */
       break;
@@ -154,6 +155,7 @@ char *colorspace_string(J_COLOR_SPACE space)
     case (JCS_RGB565):     /* 5-bit red/6-bit green/5-bit blue */
       name="JCS_RGB565";
     break;
+#endif
 
     default:
       name="unknown";

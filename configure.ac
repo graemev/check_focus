@@ -8,8 +8,16 @@ AC_PROG_INSTALL
 AC_SEARCH_LIBS([jpeg_std_error], [jpeg])
 AC_SEARCH_LIBS([sqrt], [m])
 # Check for (the exsistance of) required headers
-AC_CHECK_HEADERS([stdio.h stdlib.h unistd.h unistd.h math.h getopt.h string.h])
-#
+AC_CHECK_HEADERS([stdio.h stdlib.h unistd.h unistd.h math.h getopt.h string.h jpeglib.h])
+# Check for (the exsistance of) required symbols
+# AC_CHECK_DECLS_ONCE([JCS_EXT_RGB]) --- does not consider includes already checked above (odd?)
+AC_CHECK_DECLS([JCS_EXT_RGB],[],[],[AC_INCLUDES_DEFAULT
+[#include <string.h>
+#ifdef HAVE_JPEGLIB_H
+# include <jpeglib.h>
+#endif
+]])
+
 #
 AM_INIT_AUTOMAKE
 AC_OUTPUT
