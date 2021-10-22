@@ -11,7 +11,7 @@ CATEGORISE_FOCUS \- Utility script to arrange images into directories
 [\fB\-r\fR]
 [\fB\-\-rename\fR]
 best [worst]
-.IR files ...
+.IR \< scorefile ...
 .SH DESCRIPTION
 .B CATEGORISE_FOCUS
 A utility script which groups images into BEST , WORST and the remainder.

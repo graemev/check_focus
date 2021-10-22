@@ -146,6 +146,7 @@ int  cursors = CURSORS;
 
 
 static int        channel        = RGB_GREEN;
+static char      *sep		 = " ";       /* field seperator (in case you have silly filenames with spaces tabs etc*/
 static Trow	  opt_box_height = 0;
 static Tcol	  opt_box_width  = 0;
 
@@ -487,13 +488,17 @@ static void usage(char prog[])
 {
   fprintf(stderr, "Usage: %s [-v|--verbose][-d|--debug][-r|--red|-b|--blue|-g|--green][-f <filelistname>|--file <filelistname>] <list of filenames>\n"
 	          "[-B <cols>:<rows>|--box <cols>:<rows>] [-H <hframes> | -hframes <hframes>] [-V <vframes> | -vframes <vframes>]\n"
+  		  "-t SEP | --field-separator=SEP\n"
 		  "\n"
+		  "-h or --help output (this) help text\n"
                   "-v or --verbose produce more verbose output, can be repeated for more verbosity\n"
                   "-d or --debug produce debug output on stderr, can be repeated for more verbosity\n"
 	          "[-r|--red|-b|--blue|-g|--green] base the calculations on reg/green or blue channels, default is green, ignored for greyscale\n"
 		  "[-f <filelistname>|--file <filelistname>] filelistname is a file which contains a list of files, one per line. These are processed before <list of filenames>\n"
 		  "<hframes> and <vframes> defines the number of frames and thus indirectly the number of frames\n"
 		  "[-B <cols>:<rows>|--box <cols>:<rows>] defines just the size of a focus box withing a frame (default is full frame szie) \n"
+		  "\n"
+		  "[-t SEP | --field-separator=SEP default is space, use SEP as field seperator\n"
 		  "\n"
 		  "The Image is divided into <hframe> Horizontal frames by <vframe> Vertical frames\n"
 		  "A 2nd set of alternate frames is defined midways (horizontally & vertically) between frames\n"
@@ -503,6 +508,8 @@ static void usage(char prog[])
 		  "<hframes> defaults to: HFRAMES <vframes> defaults to: VFRAMES \n"
 		  "The box size defaults to the entire frame\n"
 		  "\n"
+		  "Output format is:  'filename' best_box.stat (<TLH-col>:<TLH-row>-<BRH-col>:<BRH-row>) \n"
+	  	  "\n"
 	  
 	  , prog);
 }
@@ -539,9 +546,9 @@ static int process_1file(char * input_filename)
 	    best_box.box.last_column,   best_box.box.last_row,
 	    best_box.stat );
   
-  printf("%s %llu (%d:%d-%d:%d)\n",
-	 input_filename,	 
-	 best_box.stat,
+  printf("'%s'%s%llu%s(%d:%d-%d:%d)\n",
+	 input_filename,					sep,
+	 best_box.stat,						sep,
 	 best_box.box.first_column,  best_box.box.first_row,
 	 best_box.box.last_column,   best_box.box.last_row);
 
@@ -569,6 +576,7 @@ int main(int argc, char **argv)
       static struct option long_options[] =
 	{
 	 /* name     has_arg,           flag, val */
+	 {"help",    no_argument,       0,    'h' },
 	 {"debug",   no_argument,       0,    'd' },
 	 {"verbose", no_argument,       0,    'v' },
 	 {"red",     no_argument,       0,    'r' },
@@ -578,12 +586,14 @@ int main(int argc, char **argv)
 	 {"hframes", required_argument, 0,    'H' },   /* -H number of Horizontal frames */
 	 {"vframes", required_argument, 0,    'V' },   /* -V number of Vertical frames   */
 	 {"box",     required_argument, 0,    'B' },   /* -B cols:rows */
+	 {"field-separator",required_argument, 0,    't' },
+	 
 	 {0,         0,                 0,    0 }
 	};
 
       c = getopt_long(argc,
 		      argv,
-		      "dvrbgf:H:V:B:",
+		      "dvrbgf:H:V:B:t:h",
 		      long_options,
 		      &option_index);
 
@@ -592,6 +602,9 @@ int main(int argc, char **argv)
 
       switch (c)
 	{
+	case 'h':
+	  usage(argv[0]);
+	  break;
 
 	case 'd':
 	  debug+=1;
@@ -634,6 +647,10 @@ int main(int argc, char **argv)
 
 	case 'B':
 	  boxstring=optarg;
+	  break;
+
+	case 't':
+	  sep=optarg;
 	  break;
 
 	default:

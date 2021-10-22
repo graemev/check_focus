@@ -10,11 +10,13 @@ set -ue
 usage() {
 
     cat <<-EOF
-	USAGE: categorise [-v][--verbose] [-k key][--key key][-r][--rename] best [worst] < scorefile  > command-file
+	USAGE: categorise [-v][--verbose] [-tSEP] [--field-separator=SEP] [-k key][--key key][-r][--rename] best [worst] < scorefile  > command-file
 
+	-h or --help emits this help text
 	-v or --verbose does the obvious thing
 	-k key or --key key selects which key (column) is used to decide best/worst defaults to 2 (whole image from checkfocus)
 	-r or --rename causes the output commands to rename the image file to prefix the chosen score (key) to filename, allows easy review in order
+	-t or --field-separator, needs to match the -t option of the generating tool, to cope with filenames containing spaces
 
 	<best> and <worst> are scores. 
 	Images with values above <best> are categorised as good
@@ -39,6 +41,7 @@ typeset -i keyelement
 typeset -i n
 typeset -i col
 typeset -i lineno
+typeset -i help
 
 typeset -a line
 
@@ -48,12 +51,15 @@ verbose=0
 rename=0
 keycolumn=2
 
+help=0
+
+
 : ${best:=0}
 : ${worst:=0}
 
+sep=""
 
-
-TEMP=`getopt -o vrk: --long verbose,rename,key: -n ${PROG} -- "$@"`
+TEMP=`getopt -o hvrk:t: --long verbose,rename,key:,field-separator: -n ${PROG} -- "$@"`
 
 if [ $? != 0 ] ; then echo "Getopt failed, terminating..." >&2 ; exit 1 ; fi
 
@@ -62,13 +68,22 @@ eval set -- "$TEMP"
 
 while true ; do
 	case "$1" in
-		-v|--verbose)       verbose=1      ; shift   ;;
-		-r|--rename)        rename=1       ; shift   ;;
-		-k|--key)           keycolumn="$2" ; shift 2 ;;
+		-h|--help)            help=1         ; shift   ;;
+		-v|--verbose)         verbose=1      ; shift   ;;
+		-r|--rename)          rename=1       ; shift   ;;
+		-k|--key)             keycolumn="$2" ; shift 2 ;;
+		-t|--field-separator) sep="$2"       ; shift 2 ;;
 		--) shift ; break ;;
 		*) echo "Internal error!" ; exit 1 ;;
 	esac
 done
+
+
+if [[ ${help} -ne 0 ]] ; then
+  usage
+  exit 1
+fi
+
 
 if [ $# -lt 1 -o  $# -gt 2 ] ; then
   usage
@@ -106,6 +121,12 @@ fi
 
 lineno=0
 
+if [[ "${sep}" != "" ]] ; then
+    OLDIFS="${IFS}"
+    IFS="${sep}"
+fi
+
+
 while read -a line
 do
     lineno+=1
@@ -115,6 +136,7 @@ do
 	echo -n "${n} items on line ${lineno} " >&2
 	echo -n "Filename: ${line[0]} "         >&2
 	echo -n "Fields: "                      >&2
+	echo -n "IFS: ${IFS}"                   >&2
 
 	for ((i=1; i<n; ++i))
 	do
@@ -122,31 +144,30 @@ do
 	    echo -n "k[${col}]=${line[i]},"    >&2  # sort is 1 based, arrrays are 0 based
 	done
 	echo                                   >&2
-
-	if [[ ${best} -ne 0 ]] ; then
-	    if [[ line[keyelement] -gt best ]] ; then
-		if [[ ${rename} -eq 0 ]] ;then
-		    echo "mv ${line[0]} BEST"
-		else
-		    echo "mv ${line[0]} BEST/${line[keyelement]}-${line[0]}"
-		fi
-		
-	    fi
-	fi
-
-	if [[ ${worst} -ne 0 ]] ; then
-	    if [[ line[keyelement] -lt worst ]] ; then
-		if [[ ${rename} -eq 0 ]] ;then
-		    echo "mv ${line[0]} WORST"
-		else
-		    echo "mv ${line[0]} WORST/${line[keyelement]}-${line[0]}"
-		fi
-		
-	    fi
-	fi
-	
     fi
-    
+	
+    if [[ ${best} -ne 0 ]] ; then
+	if [[ line[keyelement] -gt best ]] ; then
+	    if [[ ${rename} -eq 0 ]] ;then
+		echo "mv ${line[0]} BEST"
+	    else
+		echo "mv ${line[0]} BEST/${line[keyelement]}-${line[0]}"
+	    fi
+	    
+	fi
+    fi
+
+    if [[ ${worst} -ne 0 ]] ; then
+	if [[ line[keyelement] -lt worst ]] ; then
+	    if [[ ${rename} -eq 0 ]] ;then
+		echo "mv ${line[0]} WORST"
+	    else
+		echo "mv ${line[0]} WORST/${line[keyelement]}-${line[0]}"
+	    fi
+	    
+	fi
+    fi
+	
 done
 
 exit

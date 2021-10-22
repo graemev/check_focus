@@ -30,6 +30,7 @@
 
 
 static int   channel = RGB_GREEN;
+static char *sep     = " ";       /* field seperator (in case you have silly filenames with spaces tabs etc*/
 
 static struct box box = {0,0,0,0};
 
@@ -326,7 +327,9 @@ static void usage(char prog[])
 	          "[-B x:y-x:y|--box x:y-x:y][-f <filelistname>|--file <filelistname>] [-F[<rows:cols>] | --fudge=[<row:col>]\n"
 	          "[-o<0-255>] | --overexposed=<0-255> [-u<0-255>] | --underxposed=<0-255> <list of filenames>\n"
 		  "-s <bits>|--shift <bits>\n"
+		  "-t SEP | --field-separator=SEP\n"
 		  "\n"
+                  "-h or --help output (this) help text\n"
                   "-v or --verbose produce more verbose output, can be repeated for more verbosity\n"
                   "-d or --debug produce debug output on stderr, can be repeated for more verbosity\n"
 	          "[-r|--red|-b|--blue|-g|--green] base the calculations on reg/green or blue channels, default is green, ignored for greyscale\n"
@@ -336,6 +339,10 @@ static void usage(char prog[])
 		  "[-F[<rows:cols>] | --fudge=[<row:col>] {note the syntax} defines a fudgebox, adjusts score to match this\n"
 		  "[-o<0-255>] | --overexposed=<0-255> default is 230 \n"
 		  "[-u<0-255>] | --underxposed=<0-255> default is 25\n"
+		  "[-t SEP | --field-separator=SEP default is space, use SEP as field seperator\n"
+		  "\n"
+		  "Output format is:  'filename' overall horizontal vertical box.overall box.horizontal box.vertical %%overexposed %%underexposed\n"
+	  	  "\n"
 
 	  , prog);
 }
@@ -358,16 +365,16 @@ static int process_1file(char * input_filename)
 
   read_jpeg_file(input_file, &result);
 
-  printf("%s %llu %llu %llu %llu %llu %llu %d %d\n",
-	 input_filename,
-	 adjust(result.image.overall,         shift, fudge),  /* we only fudge the overall score, box is smaller (so fixed if required) */
-	 adjust(result.image.horizontal,      shift, hfudge),
-	 adjust(result.image.vertical,        shift, vfudge),	 
-	 adjust(result.centre_box.overall,    shift, 0.0),
-	 adjust(result.centre_box.horizontal, shift, 0.0),
-	 adjust(result.centre_box.vertical,   shift, 0.0),
-	 (100*result.overexposed)/result.samples,             /* Order of evaluation is important */
-	 (100*result.underexposed)/result.samples             /* %age of cells at or below limit */
+  printf("'%s'%s%llu%s%llu%s%llu%s%llu%s%llu%s%llu%s%d%s%d\n",
+	 input_filename,                                      sep,
+	 adjust(result.image.overall,         shift, fudge),  sep,  /* we only fudge the overall score, box is smaller (so fixed if required) */
+	 adjust(result.image.horizontal,      shift, hfudge), sep,
+	 adjust(result.image.vertical,        shift, vfudge), sep,	 
+	 adjust(result.centre_box.overall,    shift, 0.0),    sep,
+	 adjust(result.centre_box.horizontal, shift, 0.0),    sep,
+	 adjust(result.centre_box.vertical,   shift, 0.0),    sep,
+	 (100*result.overexposed)/result.samples,             sep, /* Order of evaluation is important */
+	 (100*result.underexposed)/result.samples                  /* %age of cells at or below limit */
 	 );
   
   if (verbose)
@@ -398,6 +405,7 @@ int main(int argc, char **argv)
       static struct option long_options[] =
 	{
 	 /* name           has_arg,           flag, val */
+	 {"help",          no_argument,       0,    'h' },
 	 {"debug",         no_argument,       0,    'd' },
 	 {"verbose",       no_argument,       0,    'v' },
 	 {"red",           no_argument,       0,    'r' },
@@ -409,13 +417,14 @@ int main(int argc, char **argv)
 	 {"fudge",         optional_argument, 0,    'F' },
 	 {"overexposed",   required_argument, 0,    'o' },
 	 {"underexposed",  required_argument, 0,    'u' },
+	 {"field-separator",required_argument, 0,    't' },
 
 	 {0,         0,                 0,    0 }
 	};
       
       c = getopt_long(argc,
 		      argv,
-		      "dvrbgf:B:s:F::o:u:",
+		      "dvrbgf:B:s:F::o:u:t:h",
 		      long_options,
 		      &option_index);
       
@@ -424,6 +433,9 @@ int main(int argc, char **argv)
 
       switch (c)
 	{
+	case 'h':
+	  usage(argv[0]);
+	  break;
 
 	case 'd':
 	  debug+=1;
@@ -478,6 +490,10 @@ int main(int argc, char **argv)
 	      fprintf(stderr, "--underexposed must be in range 0-255, setting ignored");
 	  else
 	    underexposed_limit=(unsigned char)x;
+	  break;
+
+	case 't':
+	  sep=optarg;
 	  break;
 
 	default:
